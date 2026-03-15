@@ -12,7 +12,7 @@ Import your `.slp` files, get personalized coaching analysis from an LLM, track 
 ### AI Coaching Analysis — Expanded
 ![Coaching analysis expanded](screenshots/Screenshot_20260315_132303.png)
 
-### Coaching — Dark mode (Marth theme)
+### Coaching — Dark mode (Fox theme)
 ![Coaching tab - dark mode](screenshots/Screenshot_20260315_132457.png)
 
 ### Profile — Player radar chart and matchup records
