@@ -77,7 +77,7 @@ function createWindow(): void {
     webPreferences: {
       preload: process.env["VITE_DEV_SERVER_URL"]
         ? path.resolve(__dirname, "..", "preload", "entry.js")
-        : path.resolve(__dirname, "../../src/preload/entry.js"),
+        : path.resolve(__dirname, "../../../src/preload/entry.js"),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false, // needed for preload to use require()
@@ -109,7 +109,9 @@ function setupIPC(): void {
 
   // Folder picker
   ipcMain.handle("dialog:openFolder", async () => {
-    const result = await dialog.showOpenDialog({
+    const win = BrowserWindow.getFocusedWindow() ?? mainWindow;
+    if (!win) return null;
+    const result = await dialog.showOpenDialog(win, {
       properties: ["openDirectory"],
       title: "Select Slippi Replay Folder",
     });

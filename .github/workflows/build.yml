@@ -6,6 +6,9 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     strategy:
@@ -13,13 +16,10 @@ jobs:
         include:
           - os: ubuntu-latest
             platform: linux
-            targets: AppImage
           - os: windows-latest
             platform: win
-            targets: nsis portable
           - os: macos-latest
             platform: mac
-            targets: dmg
 
     runs-on: ${{ matrix.os }}
 
@@ -48,8 +48,21 @@ jobs:
       - name: Rebuild native modules for Electron
         run: npx electron-rebuild
 
-      - name: Build Electron app
-        run: npx electron-builder --${{ matrix.platform }} ${{ matrix.targets }}
+      - name: Build Electron app (Linux)
+        if: matrix.platform == 'linux'
+        run: npx electron-builder --linux AppImage --publish never
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Electron app (Windows)
+        if: matrix.platform == 'win'
+        run: npx electron-builder --win nsis portable --publish never
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Electron app (macOS)
+        if: matrix.platform == 'mac'
+        run: npx electron-builder --mac dmg --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -61,17 +74,46 @@ jobs:
             release/*.AppImage
             release/*.exe
             release/*.dmg
-            release/*.deb
           if-no-files-found: ignore
 
-      - name: Upload to GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: List artifacts
+        run: find artifacts -type f | head -20
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            release/*.AppImage
-            release/*.exe
-            release/*.dmg
+            artifacts/**/*.AppImage
+            artifacts/**/*.exe
+            artifacts/**/*.dmg
           draft: false
+          generate_release_notes: false
+          body: |
+            ## Coach-Clippi ${{ github.ref_name }}
+
+            AI-powered Melee coaching from your Slippi replays.
+
+            ### Downloads
+            - **Windows:** `.exe` installer
+            - **macOS:** `.dmg` disk image
+            - **Linux:** `.AppImage` (make executable with `chmod +x`)
+
+            ### Getting Started
+            1. Open the app
+            2. Go to Settings — enter your tag, browse to your replay folder
+            3. Click Import All
+            4. Go to Coaching tab and click any game for AI analysis
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
