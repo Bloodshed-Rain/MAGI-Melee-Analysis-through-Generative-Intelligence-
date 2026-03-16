@@ -52,6 +52,8 @@ Import your `.slp` files, get personalized coaching analysis from an LLM, track 
 - **Matchup & stage records** — win rate bars for every character and stage you've played
 - **Replay deduplication** — SHA-256 hash on import, never imports the same file twice
 - **Analysis caching** — coaching results stored in the database, clicking the same game twice costs $0
+- **Character-specific stats** — Peach turnip pull tracking (face breakdown, rare items, hit rate) and Marth Ken combo detection (fair(s) → dair spike sequences)
+- **Multi-LLM provider** — OpenRouter (full model catalog with live pricing), Gemini direct, Anthropic direct, OpenAI direct, or local models via Ollama/LM Studio
 - **Rate-limited API queue** — LLM calls processed one at a time with delays, prevents 429 errors on batch imports
 - **File watcher** — point at your Slippi replay folder, auto-imports new games as you play
 - **26 character themes** — Slippi green default plus Fox, Falco, Marth, Sheik, Captain Falcon, Peach, Jigglypuff, Ice Climbers, Pikachu, Samus, Dr. Mario, Yoshi, Luigi, Mario, Ganondorf, Link, Young Link, Roy, Zelda, Donkey Kong, Bowser, Ness, Mewtwo, Kirby, and Mr. Game & Watch — each based on the character's actual default costume palette
@@ -63,7 +65,7 @@ Import your `.slp` files, get personalized coaching analysis from an LLM, track 
 - **Electron** + **React** + **TypeScript** — cross-platform desktop app
 - **slippi-js** — parses `.slp` replay files
 - **better-sqlite3** — local database for stats, analyses, and config
-- **Gemini 2.5 Flash** — default LLM for coaching analysis (~$0.01-0.03 per game)
+- **Multi-LLM support** — DeepSeek V3 via OpenRouter (default), plus Gemini, Claude, GPT-4o, and local models (Ollama/LM Studio)
 - **Recharts** — trend line charts and radar chart
 - **Vite** — frontend bundling and dev server
 - **chokidar** — file system watching for auto-import
@@ -97,8 +99,9 @@ npm run dev
 2. Go to **Settings**
 3. Enter your display name / tag
 4. Browse to your Slippi replay folder
-5. Click **Save Settings**, then **Import All**
-6. Go to the **Coaching** tab and click any game
+5. Choose an AI model and enter your API key (OpenRouter recommended — one key for all models)
+6. Click **Save Settings**, then **Import All**
+7. Go to the **Coaching** tab and click any game
 
 ### CLI usage (optional)
 
@@ -106,7 +109,7 @@ The analysis pipeline also works from the command line:
 
 ```bash
 # One-time setup
-npx tsx src/setup.ts --tag YourTag --folder /path/to/replays
+npx tsx src/setup.ts --tag YourTag --folder /path/to/replays --openrouter-key sk-or-...
 
 # Import replays
 npx tsx src/import-cli.ts
@@ -134,14 +137,15 @@ npx tsx src/watcher.ts
     |
     +---> [SQLite] --> persistent stats, trends, opponent history
     |
-    +---> [LLM Queue] --> rate-limited Gemini API calls
+    +---> [LLM Queue] --> rate-limited API calls (OpenRouter/Gemini/Claude/OpenAI/local)
               |
               v
           [Coaching Analysis] --> cached in DB, rendered as markdown
 ```
 
 Key modules:
-- `src/pipeline.ts` — data pipeline: slippi-js parsing, stat computation, habit detection, prompt assembly
+- `src/pipeline.ts` — data pipeline: slippi-js parsing, stat computation, habit detection, character-specific stats, prompt assembly
+- `src/llm.ts` — multi-provider LLM abstraction (OpenRouter, Gemini, Anthropic, OpenAI, local)
 - `src/db.ts` — SQLite schema, queries, trend/matchup/opponent/set detection
 - `src/replayAnalyzer.ts` — deduplicated analysis flow with caching
 - `src/llmQueue.ts` — rate-limited queue for LLM API calls
@@ -156,12 +160,13 @@ Im not charging any money at this point, but in the future when/if enough people
 
 ## Roadmap
 
+- [x] Multi-provider LLM support (OpenRouter, Claude, GPT-4o, Gemini, local)
+- [x] Local model support (Ollama / LM Studio)
+- [x] Character-specific stats (Peach turnip tracking, Marth Ken combos)
 - [ ] Worker thread parsing for non-blocking bulk imports
 - [ ] Dolphin HUD mode (wrap around the emulator window)
 - [ ] Practice plan tracking with progress indicators
 - [ ] Shareable coaching reports
-- [ ] Local model support (Ollama / LM Studio)
-- [ ] Multi-provider LLM support (Claude, GPT-4o, local)
 
 ## License
 
