@@ -143,9 +143,18 @@ export const LLM_DEFAULTS: LLMConfig = {
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 2000;
+const FETCH_TIMEOUT_MS = 120_000; // 2 minutes
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  return fetch(url, { ...init, signal: controller.signal }).finally(() =>
+    clearTimeout(timeout),
+  );
 }
 
 class EmptyResponseError extends Error {
@@ -208,7 +217,7 @@ async function callOpenRouter(
   });
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${apiKey}`,
@@ -218,6 +227,15 @@ async function callOpenRouter(
       },
       body,
     });
+
+    if (response.status === 429) {
+      if (attempt < MAX_RETRIES) {
+        const retryAfter = parseInt(response.headers.get("retry-after") ?? "", 10);
+        await sleep((Number.isFinite(retryAfter) ? retryAfter * 1000 : RETRY_DELAY_MS * attempt * 2));
+        continue;
+      }
+      throw new Error("OpenRouter rate limit exceeded. Please try again in a moment.");
+    }
 
     if (!response.ok) {
       const errorBody = await response.text();
@@ -264,7 +282,7 @@ async function callGemini(
   });
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       method: "POST",
       headers: {
         "x-goog-api-key": apiKey,
@@ -272,6 +290,14 @@ async function callGemini(
       },
       body,
     });
+
+    if (response.status === 429) {
+      if (attempt < MAX_RETRIES) {
+        await sleep(RETRY_DELAY_MS * attempt * 2);
+        continue;
+      }
+      throw new Error("Gemini rate limit exceeded. Please try again in a moment.");
+    }
 
     if (!response.ok) {
       const errorBody = await response.text();
@@ -328,7 +354,7 @@ async function callAnthropic(
   });
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       method: "POST",
       headers: {
         "x-api-key": apiKey,
@@ -337,6 +363,15 @@ async function callAnthropic(
       },
       body,
     });
+
+    if (response.status === 429) {
+      if (attempt < MAX_RETRIES) {
+        const retryAfter = parseInt(response.headers.get("retry-after") ?? "", 10);
+        await sleep((Number.isFinite(retryAfter) ? retryAfter * 1000 : RETRY_DELAY_MS * attempt * 2));
+        continue;
+      }
+      throw new Error("Anthropic rate limit exceeded. Please try again in a moment.");
+    }
 
     if (!response.ok) {
       const errorBody = await response.text();
@@ -386,7 +421,7 @@ async function callOpenAI(
   });
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${apiKey}`,
@@ -394,6 +429,15 @@ async function callOpenAI(
       },
       body,
     });
+
+    if (response.status === 429) {
+      if (attempt < MAX_RETRIES) {
+        const retryAfter = parseInt(response.headers.get("retry-after") ?? "", 10);
+        await sleep((Number.isFinite(retryAfter) ? retryAfter * 1000 : RETRY_DELAY_MS * attempt * 2));
+        continue;
+      }
+      throw new Error("OpenAI rate limit exceeded. Please try again in a moment.");
+    }
 
     if (!response.ok) {
       const errorBody = await response.text();
@@ -440,12 +484,15 @@ async function callLocal(
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     let response: Response;
     try {
-      response = await fetch(url, {
+      response = await fetchWithTimeout(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body,
       });
     } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        throw new Error(`Local model at ${endpoint} timed out after ${FETCH_TIMEOUT_MS / 1000}s. The model may be loading or the request may be too large.`);
+      }
       throw new Error(
         `Could not reach local model at ${endpoint}. Is Ollama or LM Studio running?\n${err instanceof Error ? err.message : String(err)}`,
       );

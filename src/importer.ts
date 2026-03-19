@@ -176,19 +176,24 @@ export function importReplays(
   let winsCount = 0;
 
   for (let i = 0; i < filePaths.length; i++) {
-    const result = importReplay(filePaths[i]!, targetPlayer, i + 1, sessionId);
-    results.push(result);
-    if (result.skipped) {
-      skippedCount++;
-    } else if (result.gameSummary) {
-      // Resolve target to check win
-      const tag =
-        targetPlayer ??
-        result.gameSummary.players.find((p) => p.tag.toLowerCase() !== "unknown")?.tag ??
-        result.gameSummary.players[0].tag;
-      if (result.gameSummary.result.winner === tag) {
-        winsCount++;
+    try {
+      const result = importReplay(filePaths[i]!, targetPlayer, i + 1, sessionId);
+      results.push(result);
+      if (result.skipped) {
+        skippedCount++;
+      } else if (result.gameSummary) {
+        // Resolve target to check win
+        const tag =
+          targetPlayer ??
+          result.gameSummary.players.find((p) => p.tag.toLowerCase() !== "unknown")?.tag ??
+          result.gameSummary.players[0].tag;
+        if (result.gameSummary.result.winner === tag) {
+          winsCount++;
+        }
       }
+    } catch (err) {
+      console.error(`[import] Skipping ${path.basename(filePaths[i]!)}: ${err instanceof Error ? err.message : String(err)}`);
+      skippedCount++;
     }
   }
 

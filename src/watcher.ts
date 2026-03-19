@@ -18,13 +18,17 @@ interface WatcherOptions {
 function findSlpFiles(dir: string): string[] {
   const files: string[] = [];
   const walk = (d: string): void => {
-    for (const entry of fs.readdirSync(d, { withFileTypes: true })) {
-      const full = path.join(d, entry.name);
-      if (entry.isDirectory()) {
-        walk(full);
-      } else if (entry.name.endsWith(".slp")) {
-        files.push(full);
+    try {
+      for (const entry of fs.readdirSync(d, { withFileTypes: true })) {
+        const full = path.join(d, entry.name);
+        if (entry.isDirectory()) {
+          walk(full);
+        } else if (entry.name.endsWith(".slp")) {
+          files.push(full);
+        }
       }
+    } catch (err) {
+      console.error(`[watcher] Cannot read directory ${d}: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
   walk(dir);

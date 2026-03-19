@@ -81,9 +81,13 @@ export function Settings({ onImport, themeId, onThemeChange }: SettingsProps) {
   const selectedModel = config.llmModelId || DEFAULT_MODEL_ID;
 
   const handleSave = useCallback(async () => {
-    await window.clippi.saveConfig(config);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    try {
+      await window.clippi.saveConfig(config);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err: unknown) {
+      setImportStatus(`Error saving: ${err instanceof Error ? err.message : String(err)}`);
+    }
   }, [config]);
 
   const handleBrowse = async () => {
@@ -116,21 +120,25 @@ export function Settings({ onImport, themeId, onThemeChange }: SettingsProps) {
   };
 
   const toggleWatcher = async () => {
-    if (watching) {
-      await window.clippi.stopWatcher();
-      setWatching(false);
-      setImportStatus("Watcher stopped.");
-    } else {
-      if (!config.replayFolder || !config.targetPlayer) {
-        setImportStatus("Set replay folder and player tag first.");
-        return;
+    try {
+      if (watching) {
+        await window.clippi.stopWatcher();
+        setWatching(false);
+        setImportStatus("Watcher stopped.");
+      } else {
+        if (!config.replayFolder || !config.targetPlayer) {
+          setImportStatus("Set replay folder and player tag first.");
+          return;
+        }
+        await window.clippi.startWatcher(
+          config.replayFolder,
+          config.connectCode ?? config.targetPlayer,
+        );
+        setWatching(true);
+        setImportStatus("Watching for new replays...");
       }
-      await window.clippi.startWatcher(
-        config.replayFolder,
-        config.connectCode ?? config.targetPlayer,
-      );
-      setWatching(true);
-      setImportStatus("Watching for new replays...");
+    } catch (err: unknown) {
+      setImportStatus(`Watcher error: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
 
@@ -138,9 +146,13 @@ export function Settings({ onImport, themeId, onThemeChange }: SettingsProps) {
     if (!confirm("Are you sure? This will delete all imported games, stats, and analyses.")) {
       return;
     }
-    await window.clippi.clearAllGames();
-    setImportStatus("All games cleared.");
-    onImport();
+    try {
+      await window.clippi.clearAllGames();
+      setImportStatus("All games cleared.");
+      onImport();
+    } catch (err: unknown) {
+      setImportStatus(`Error clearing data: ${err instanceof Error ? err.message : String(err)}`);
+    }
   };
 
   return (

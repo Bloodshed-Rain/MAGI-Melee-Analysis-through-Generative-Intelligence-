@@ -2298,16 +2298,31 @@ export function processGame(filePath: string, gameNumber: number): {
   derivedInsights: [DerivedInsights, DerivedInsights];
   startAt: string | null;
 } {
-  const game = new SlippiGame(filePath);
-  const settings = game.getSettings();
-  const stats = game.getStats();
-  const metadata = game.getMetadata();
-  const gameEnd = game.getGameEnd();
-  const frames = game.getFrames();
+  let game: SlippiGame;
+  try {
+    game = new SlippiGame(filePath);
+  } catch (err) {
+    throw new Error(`Cannot open replay file: ${filePath} — ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+  let settings: ReturnType<SlippiGame["getSettings"]>;
+  let stats: ReturnType<SlippiGame["getStats"]>;
+  let metadata: ReturnType<SlippiGame["getMetadata"]>;
+  let gameEnd: ReturnType<SlippiGame["getGameEnd"]>;
+  let frames: ReturnType<SlippiGame["getFrames"]>;
+  try {
+    settings = game.getSettings();
+    stats = game.getStats();
+    metadata = game.getMetadata();
+    gameEnd = game.getGameEnd();
+    frames = game.getFrames();
+  } catch (err) {
+    throw new Error(`Failed to read replay data from: ${filePath} — ${err instanceof Error ? err.message : String(err)}`);
+  }
   const startAt = metadata?.startAt ?? null;
 
   if (!settings || !stats || !frames) {
-    throw new Error(`Failed to parse game: ${filePath}`);
+    throw new Error(`Incomplete replay data (missing ${[!settings && "settings", !stats && "stats", !frames && "frames"].filter(Boolean).join(", ")}): ${filePath}`);
   }
 
   const players = settings.players.filter(

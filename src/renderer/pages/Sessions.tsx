@@ -47,12 +47,16 @@ export function Sessions({ refreshKey }: { refreshKey: number }) {
   }, [refreshKey]);
 
   const handleSearch = async () => {
-    if (!opponentSearch.trim()) {
-      const o = await window.clippi.getOpponents();
-      setOpponents(o);
-    } else {
-      const o = await window.clippi.getOpponents(opponentSearch.trim());
-      setOpponents(o);
+    try {
+      if (!opponentSearch.trim()) {
+        const o = await window.clippi.getOpponents();
+        setOpponents(o);
+      } else {
+        const o = await window.clippi.getOpponents(opponentSearch.trim());
+        setOpponents(o);
+      }
+    } catch (err) {
+      console.error("Opponent search failed:", err);
     }
   };
 

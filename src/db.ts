@@ -126,17 +126,28 @@ let db: Database.Database | null = null;
 export function getDb(): Database.Database {
   if (!db) {
     ensureDataDir();
-    db = new Database(DB_PATH);
-    db.pragma("journal_mode = WAL");
-    db.pragma("foreign_keys = ON");
-    db.exec(SCHEMA);
+    try {
+      db = new Database(DB_PATH);
+      db.pragma("journal_mode = WAL");
+      db.pragma("foreign_keys = ON");
+      db.exec(SCHEMA);
+    } catch (err) {
+      db = null;
+      throw new Error(
+        `Failed to initialize database at ${DB_PATH}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
   }
   return db;
 }
 
 export function closeDb(): void {
   if (db) {
-    db.close();
+    try {
+      db.close();
+    } catch {
+      // Ignore close errors during shutdown
+    }
     db = null;
   }
 }

@@ -47,13 +47,19 @@ export function loadConfig(): Config {
 }
 
 export function saveConfig(config: Partial<Config>): Config {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    const current = loadConfig();
+    const merged = { ...current, ...config };
+    fs.writeFileSync(CONFIG_PATH, JSON.stringify(merged, null, 2) + "\n");
+    return merged;
+  } catch (err) {
+    throw new Error(
+      `Failed to save config: ${err instanceof Error ? err.message : String(err)}`,
+    );
   }
-  const current = loadConfig();
-  const merged = { ...current, ...config };
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(merged, null, 2) + "\n");
-  return merged;
 }
 
 /** Resolve target player: CLI arg > config > null */

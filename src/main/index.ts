@@ -101,13 +101,28 @@ function createWindow(): void {
 
 // ── IPC Handlers ─────────────────────────────────────────────────────
 
+/** Wrap an IPC handler so errors are always serialized properly to the renderer */
+function safeHandle(
+  channel: string,
+  handler: (event: Electron.IpcMainInvokeEvent, ...args: any[]) => any,
+): void {
+  ipcMain.handle(channel, async (event, ...args) => {
+    try {
+      return await handler(event, ...args);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      throw new Error(message);
+    }
+  });
+}
+
 function setupIPC(): void {
   // Config
-  ipcMain.handle("config:load", () => loadConfig());
-  ipcMain.handle("config:save", (_e, config: Partial<Config>) => saveConfig(config));
+  safeHandle("config:load", () => loadConfig());
+  safeHandle("config:save", (_e, config: Partial<Config>) => saveConfig(config));
 
   // Folder picker
-  ipcMain.handle("dialog:openFolder", async () => {
+  safeHandle("dialog:openFolder", async () => {
     const win = BrowserWindow.getFocusedWindow() ?? mainWindow;
     if (!win) return null;
     const result = await dialog.showOpenDialog(win, {
@@ -118,18 +133,27 @@ function setupIPC(): void {
   });
 
   // Import
-  ipcMain.handle("import:folder", async (_e, folderPath: string, targetPlayer: string) => {
+  safeHandle("import:folder", async (_e, folderPath: string, targetPlayer: string) => {
     // Resolve .slp files from folder
     const fs = require("fs") as typeof import("fs");
     const files: string[] = [];
     const walk = (dir: string) => {
-      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-        const full = path.join(dir, entry.name);
-        if (entry.isDirectory()) walk(full);
-        else if (entry.name.endsWith(".slp")) files.push(full);
+      try {
+        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+          const full = path.join(dir, entry.name);
+          if (entry.isDirectory()) walk(full);
+          else if (entry.name.endsWith(".slp")) files.push(full);
+        }
+      } catch (err) {
+        console.error(`[import] Cannot read directory ${dir}: ${err instanceof Error ? err.message : String(err)}`);
       }
     };
     walk(folderPath);
+
+    if (files.length === 0) {
+      throw new Error(`No .slp replay files found in: ${folderPath}`);
+    }
+
     files.sort();
 
     const result = importReplays(files, targetPlayer);
@@ -140,12 +164,12 @@ function setupIPC(): void {
     };
   });
 
-  ipcMain.handle("import:analyze", async (_e, filePaths: string[], targetPlayer: string) => {
+  safeHandle("import:analyze", async (_e, filePaths: string[], targetPlayer: string) => {
     return importAndAnalyze(filePaths, targetPlayer);
   });
 
   // Analyze — deduplicated. Returns cached analysis if already exists.
-  ipcMain.handle("analyze:run", async (_e, replayPaths: string[], targetPlayer: string) => {
+  safeHandle("analyze:run", async (_e, replayPaths: string[], targetPlayer: string) => {
     const llmConfig = resolveLLMConfig();
 
     // Single replay — use processReplay for dedup + caching
@@ -192,7 +216,7 @@ function setupIPC(): void {
   });
 
   // Analyze recent games from the DB (by replay paths)
-  ipcMain.handle("analyze:recent", async (_e, count: number, targetPlayer: string) => {
+  safeHandle("analyze:recent", async (_e, count: number, targetPlayer: string) => {
     const games = getDb().prepare(`
       SELECT replay_path FROM games
       WHERE played_at IS NOT NULL
@@ -241,7 +265,7 @@ function setupIPC(): void {
   });
 
   // Trend commentary — MAGI reacts to your trend data
-  ipcMain.handle("analyze:trends", async (_e, trendSummary: string) => {
+  safeHandle("analyze:trends", async (_e, trendSummary: string) => {
     const llmConfig = resolveLLMConfig();
 
     const trendPrompt = `You are MAGI (Melee Analysis through Generative Intelligence), a Melee coaching assistant with personality. You're reviewing a player's stat trends over their recent games.
@@ -259,7 +283,7 @@ Open with a quick vibe check on their overall trajectory, then hit the highlight
   });
 
   // Fetch OpenRouter models from main process (renderer is blocked by CSP)
-  ipcMain.handle("openrouter:models", async () => {
+  safeHandle("openrouter:models", async () => {
     const res = await fetch("https://openrouter.ai/api/v1/models");
     if (!res.ok) throw new Error(`OpenRouter API ${res.status}`);
     const json = await res.json() as { data: any[] };
@@ -267,39 +291,39 @@ Open with a quick vibe check on their overall trajectory, then hit the highlight
   });
 
   // LLM models list — for the Settings UI
-  ipcMain.handle("llm:models", () => MODELS);
-  ipcMain.handle("llm:currentModel", () => {
+  safeHandle("llm:models", () => MODELS);
+  safeHandle("llm:currentModel", () => {
     const config = loadConfig();
     const modelId = config.llmModelId ?? LLM_DEFAULTS.modelId;
     return { modelId, label: getModelLabel(modelId) };
   });
 
   // Queue status — so UI can show "3 analyses pending..."
-  ipcMain.handle("queue:status", () => ({
+  safeHandle("queue:status", () => ({
     pending: llmQueue.pending,
     processing: llmQueue.isProcessing,
   }));
 
   // Stats / queries
-  ipcMain.handle("stats:overall", () => getOverallRecord());
-  ipcMain.handle("stats:matchups", () => getMatchupRecords());
-  ipcMain.handle("stats:stages", () => getStageRecords());
-  ipcMain.handle("stats:recentGames", (_e, limit: number) => getRecentGames(limit));
-  ipcMain.handle("stats:latestAnalysis", () => getLatestAnalysis(1));
-  ipcMain.handle("stats:opponents", (_e, search?: string) => getOpponentHistory(search));
-  ipcMain.handle("stats:sets", () => detectSets());
-  ipcMain.handle("stats:characterList", () => getCharacterList());
-  ipcMain.handle("stats:characterMatchups", (_e, character: string) => getCharacterMatchups(character));
-  ipcMain.handle("stats:characterStages", (_e, character: string) => getCharacterStageStats(character));
-  ipcMain.handle("stats:characterSignature", (_e, character: string) => getCharacterSignatureAggregates(character));
-  ipcMain.handle("stats:characterGameStats", (_e, character: string) => getCharacterGameStats(character));
-  ipcMain.handle("data:clearAll", () => {
+  safeHandle("stats:overall", () => getOverallRecord());
+  safeHandle("stats:matchups", () => getMatchupRecords());
+  safeHandle("stats:stages", () => getStageRecords());
+  safeHandle("stats:recentGames", (_e, limit: number) => getRecentGames(limit));
+  safeHandle("stats:latestAnalysis", () => getLatestAnalysis(1));
+  safeHandle("stats:opponents", (_e, search?: string) => getOpponentHistory(search));
+  safeHandle("stats:sets", () => detectSets());
+  safeHandle("stats:characterList", () => getCharacterList());
+  safeHandle("stats:characterMatchups", (_e, character: string) => getCharacterMatchups(character));
+  safeHandle("stats:characterStages", (_e, character: string) => getCharacterStageStats(character));
+  safeHandle("stats:characterSignature", (_e, character: string) => getCharacterSignatureAggregates(character));
+  safeHandle("stats:characterGameStats", (_e, character: string) => getCharacterGameStats(character));
+  safeHandle("data:clearAll", () => {
     clearAllGames();
     return true;
   });
 
   // File watcher
-  ipcMain.handle("watcher:start", (_e, replayFolder: string, targetPlayer: string) => {
+  safeHandle("watcher:start", (_e, replayFolder: string, targetPlayer: string) => {
     if (fileWatcher) {
       fileWatcher.close();
     }
@@ -317,7 +341,7 @@ Open with a quick vibe check on their overall trajectory, then hit the highlight
     return true;
   });
 
-  ipcMain.handle("watcher:stop", () => {
+  safeHandle("watcher:stop", () => {
     if (fileWatcher) {
       fileWatcher.close();
       fileWatcher = null;
