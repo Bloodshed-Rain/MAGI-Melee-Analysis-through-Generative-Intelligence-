@@ -4,31 +4,10 @@ AI-powered Melee coaching from your Slippi replays.
 
 Import your `.slp` files, get personalized coaching analysis from an LLM, track your stats over time, and spot trends across sessions. No other tool in the Melee ecosystem does this.
 
-## Screenshots
 
-### Coaching — Click any game for AI analysis
-![Coaching tab - light mode](screenshots/Screenshot_20260315_132050.png)
 
-### AI Coaching Analysis — Expanded
-![Coaching analysis expanded](screenshots/Screenshot_20260315_132303.png)
+---[Screencast_20260319_190122.webm](https://github.com/user-attachments/assets/e41e7616-ed56-41b9-aa28-3ef38f0d0d97)
 
-### Coaching — Dark mode (Fox theme)
-![Coaching tab - dark mode](screenshots/Screenshot_20260315_132457.png)
-
-### Profile — Player radar chart and matchup records
-![Profile tab](screenshots/Screenshot_20260315_132405.png)
-
-### Sessions — Auto-detected sets and opponent history
-![Sessions tab](screenshots/Screenshot_20260315_132331.png)
-
-### Trends — Line charts with MAGI commentary
-![Trends tab](screenshots/Screenshot_20260315_132349.png)
-
-### Settings — 26 character themes with light/dark toggle
-![Settings tab - light](screenshots/Screenshot_20260315_132414.png)
-![Settings tab - dark](screenshots/Screenshot_20260315_132439.png)
-
----
 
 ## What it does
 
