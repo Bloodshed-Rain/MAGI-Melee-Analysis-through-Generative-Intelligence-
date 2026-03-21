@@ -203,17 +203,7 @@ export function Trends({ refreshKey }: { refreshKey: number }) {
     load();
   }, [refreshKey]);
 
-  if (loading) return <div className="loading"><div className="spinner" style={{ margin: "0 auto 12px" }} />LOADING TRAJECTORY DATA...</div>;
-
-  if (games.length < 4) {
-    return (
-      <div className="empty-state">
-        <h2>INSUFFICIENT DATA</h2>
-        <p>Import at least 4 engagements to generate trend analysis.</p>
-      </div>
-    );
-  }
-
+  // Memos must be above early returns to keep hook count stable
   const chronological = useMemo(() => [...games].reverse(), [games]);
 
   const chartData = useMemo(() => chronological.map((g, i) => ({
@@ -226,6 +216,17 @@ export function Trends({ refreshKey }: { refreshKey: number }) {
       }),
     ),
   })), [chronological]);
+
+  if (loading) return <div className="loading"><div className="spinner" style={{ margin: "0 auto 12px" }} />LOADING TRAJECTORY DATA...</div>;
+
+  if (games.length < 4) {
+    return (
+      <div className="empty-state">
+        <h2>INSUFFICIENT DATA</h2>
+        <p>Import at least 4 engagements to generate trend analysis.</p>
+      </div>
+    );
+  }
 
   const half = Math.floor(chronological.length / 2);
   const firstHalf = chronological.slice(0, half);
