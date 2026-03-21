@@ -412,24 +412,25 @@ Open with a quick vibe check on their overall trajectory, then hit the highlight
       throw new Error(`Replay file not found: ${replayPath}`);
     }
 
-    // Slippi Playback Dolphin uses JSON comm mode:
-    //   -i <comm.json>   replay command file
-    //   -e <melee.iso>   game ISO
-    //   -u <user_dir>    user config/data directory
+    // Replicate how Slippi Launcher launches playback Dolphin:
+    //   1. Write a JSON comm file with the replay command
+    //   2. Launch with: -b -e <melee.iso> -i <comm.json>
+    //   -b = batch mode (skip menu, boot straight into game)
+    //   -e = game ISO path
+    //   -i = JSON comm input file for replay commands
     const { spawn } = require("child_process") as typeof import("child_process");
-    const { randomUUID } = require("crypto") as typeof import("crypto");
     const home = require("os").homedir();
 
-    // Build JSON comm file telling Dolphin to play this replay
+    // Write JSON comm file (same format as Slippi Launcher)
     const commFile = path.join(require("os").tmpdir(), `magi-comm-${Date.now()}.json`);
     fs.writeFileSync(commFile, JSON.stringify({
       mode: "mirror",
       replay: replayPath,
       isRealTimeMode: false,
-      commandId: randomUUID(),
+      commandId: Math.random().toString(36).slice(2),
     }));
 
-    // Find Melee ISO — check Slippi Launcher settings first, then config
+    // Find Melee ISO from Slippi Launcher settings
     let isoPath: string | null = null;
     try {
       const slippiSettingsPath = path.join(home, ".config/Slippi Launcher/Settings");
@@ -441,12 +442,12 @@ Open with a quick vibe check on their overall trajectory, then hit the highlight
       }
     } catch { /* ignore parse errors */ }
 
-    // User dir for playback Dolphin
-    const userDir = path.join(home, ".config/SlippiPlayback");
+    if (!isoPath) {
+      throw new Error("Melee ISO not found. Set your ISO path in Slippi Launcher first.");
+    }
 
-    const args = ["-i", commFile];
-    if (isoPath) args.push("-e", isoPath);
-    if (fs.existsSync(userDir)) args.push("-u", userDir);
+    // Build args exactly like Slippi Launcher: -b -e <iso> -i <commFile>
+    const args = ["-b", "-e", isoPath, "-i", commFile];
 
     const child = spawn(dolphinPath, args, {
       detached: true,
