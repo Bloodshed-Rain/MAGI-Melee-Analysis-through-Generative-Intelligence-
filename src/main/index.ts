@@ -413,7 +413,7 @@ Open with a quick vibe check on their overall trajectory, then hit the highlight
     }
 
     const { spawn } = require("child_process") as typeof import("child_process");
-    const child = spawn(dolphinPath, ["-i", replayPath], {
+    const child = spawn(dolphinPath, ["-e", replayPath], {
       detached: true,
       stdio: "ignore",
     });
