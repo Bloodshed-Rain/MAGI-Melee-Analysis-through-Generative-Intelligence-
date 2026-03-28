@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Markdown, { type Components } from "react-markdown";
-import { useStagger, useGlitchText } from "../hooks";
+import { useStagger } from "../hooks";
 import { Onboarding } from "../components/Onboarding";
 import { StockTimeline } from "../components/StockTimeline";
 
@@ -20,7 +20,6 @@ function timestampToFrame(ts: string): number {
 
 /** Pre-process coaching markdown to convert [M:SS] timestamps into clickable links */
 function injectTimestampLinks(text: string): string {
-  // Convert [M:SS] patterns into markdown links: [▶ M:SS](timestamp:M:SS)
   return text.replace(/\[(\d{1,2}:\d{2})\]/g, "[▶ $1](timestamp:$1)");
 }
 
@@ -84,15 +83,14 @@ function PulseStat({ value, label, color, index }: {
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ delay: 0.1 + index * 0.08, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       className="stat-box"
-      style={{ textAlign: "center", position: "relative" }}
     >
-      <div className="stat-value" style={{ color, fontSize: 24 }}>{value}</div>
+      <div className="stat-value" style={{ color }}>{value}</div>
       <div className="stat-label">{label}</div>
     </motion.div>
   );
 }
 
-// Quick-glance stats from the last session -- asymmetric bento
+// Quick-glance stats from the last session
 function SessionPulse({ games }: { games: RecentGame[] }) {
   if (games.length === 0) return null;
 
@@ -121,7 +119,6 @@ export function Dashboard({ refreshKey }: { refreshKey: number }) {
   const [games, setGames] = useState<RecentGame[]>([]);
   const [loading, setLoading] = useState(true);
   const [onboardingDismissed, setOnboardingDismissed] = useState(false);
-  const title = useGlitchText("COACHING", 500);
 
   // Per-game analysis state
   const [expandedGame, setExpandedGame] = useState<number | null>(null);
@@ -206,7 +203,7 @@ export function Dashboard({ refreshKey }: { refreshKey: number }) {
     return (
       <div className="loading">
         <div className="spinner" style={{ margin: "0 auto 16px" }} />
-        INITIALIZING MAGI SYSTEMS...
+        Loading...
       </div>
     );
   }
@@ -233,8 +230,8 @@ export function Dashboard({ refreshKey }: { refreshKey: number }) {
             <line x1="9" y1="12" x2="14" y2="12" />
           </svg>
         </div>
-        <h2>NO REPLAYS DETECTED</h2>
-        <p>Navigate to Settings to configure your replay folder and begin import sequence.</p>
+        <h2>No replays found</h2>
+        <p>Go to Settings to configure your replay folder and import your games.</p>
       </div>
     );
   }
@@ -242,13 +239,13 @@ export function Dashboard({ refreshKey }: { refreshKey: number }) {
   return (
     <div>
       <motion.div
-        initial={{ opacity: 0, x: -16 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.5 }}
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
       >
         <div className="page-header">
-          <h1>{title}</h1>
-          <p>// SELECT ANY ENGAGEMENT FOR AI TACTICAL ANALYSIS</p>
+          <h1>Coaching</h1>
+          <p>Select a game for AI coaching analysis</p>
         </div>
       </motion.div>
 
@@ -263,9 +260,9 @@ export function Dashboard({ refreshKey }: { refreshKey: number }) {
           return (
             <motion.div
               key={game.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.03, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.03, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
             >
               <div className={`game-card ${isExpanded ? "expanded" : ""} ${game.result === "win" ? "game-card-win" : "game-card-loss"}`}>
                 <div className="game-card-header" role="button" tabIndex={0} onClick={() => handleGameClick(game)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleGameClick(game); } }}>
@@ -302,7 +299,7 @@ export function Dashboard({ refreshKey }: { refreshKey: number }) {
                       <span className="mini-stat-value" style={{
                         color: Number.isFinite(game.openingsPerKill) && game.openingsPerKill <= 4 ? "var(--green)" : game.openingsPerKill <= 7 ? "var(--yellow)" : "var(--red)",
                       }}>
-                        {Number.isFinite(game.openingsPerKill) ? game.openingsPerKill.toFixed(1) : "—"}
+                        {Number.isFinite(game.openingsPerKill) ? game.openingsPerKill.toFixed(1) : "\u2014"}
                       </span>
                       <span className="mini-stat-label">Op/Kill</span>
                     </div>
@@ -348,12 +345,12 @@ export function Dashboard({ refreshKey }: { refreshKey: number }) {
                           className="btn"
                           onClick={(e) => handleWatchReplay(e, game)}
                           disabled={launchingDolphin === game.id}
-                          style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11 }}
+                          style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}
                         >
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <polygon points="5 3 19 12 5 21 5 3" />
                           </svg>
-                          {launchingDolphin === game.id ? "LAUNCHING..." : "WATCH REPLAY"}
+                          {launchingDolphin === game.id ? "Launching..." : "Watch Replay"}
                         </button>
                         {dolphinError && expandedGame === game.id && (
                           <span style={{ color: "var(--red)", fontSize: 12, fontFamily: "var(--font-mono)" }}>{dolphinError}</span>
@@ -367,7 +364,7 @@ export function Dashboard({ refreshKey }: { refreshKey: number }) {
                       {isAnalyzing && !isStreaming && !streamingText && analyzingGame === game.id && (
                         <div className="analyze-loading">
                           <div className="spinner" />
-                          <span>MAGI ANALYZING ENGAGEMENT...</span>
+                          <span>Analyzing...</span>
                         </div>
                       )}
                       {analyzingGame === game.id && (isStreaming || streamingText) && !cached && (

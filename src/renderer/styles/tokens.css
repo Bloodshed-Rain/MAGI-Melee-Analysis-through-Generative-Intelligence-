@@ -1,0 +1,140 @@
+/* ── Design Tokens ─────────────────────────────────────────────────
+   Single source of truth for colors, typography, spacing, and motion.
+   Premium sports analytics aesthetic — clean, data-focused, authoritative.
+   ────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Backgrounds */
+  --bg: #0f1115;
+  --bg-card: #16181d;
+  --bg-elevated: #1c1f25;
+  --bg-hover: #23262e;
+
+  /* Borders */
+  --border: #2a2d37;
+  --border-subtle: #1e2028;
+
+  /* Text */
+  --text: #e8e6e3;
+  --text-dim: #8b8d95;
+  --text-muted: #555861;
+  --text-title: #e8e6e3;
+  --text-label: #8b8d95;
+
+  /* Accent */
+  --accent: #3ecf73;
+  --accent-dim: #35b563;
+  --accent-muted: rgba(62, 207, 115, 0.12);
+  --accent-glow: rgba(62, 207, 115, 0.08);
+
+  /* Semantic */
+  --green: #3ecf73;
+  --red: #e5484d;
+  --yellow: #f5a623;
+  --secondary: #3ecf73;
+  --secondary-dim: #35b563;
+
+  /* RGB variants for alpha compositing */
+  --accent-rgb: 62, 207, 115;
+  --green-rgb: 62, 207, 115;
+  --red-rgb: 229, 72, 77;
+  --yellow-rgb: 245, 166, 35;
+
+  /* Chart palette */
+  --chart-indigo: #6366f1;
+  --chart-green: #3ecf73;
+  --chart-amber: #f5a623;
+  --chart-red: #e5484d;
+  --chart-cyan: #06b6d4;
+  --chart-purple: #8b5cf6;
+
+  /* Typography */
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", monospace;
+  --font-display: "DM Sans", var(--font-sans);
+
+  /* Spacing — 4px base grid */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --space-8: 32px;
+  --space-9: 36px;
+  --space-10: 40px;
+  --space-11: 44px;
+  --space-12: 48px;
+
+  /* Radii */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+
+  /* Shadows — subtle and functional */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.15);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.25);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.3);
+
+  /* Easing */
+  --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Layout */
+  --rail-width: 200px;
+
+  /* Legacy compat — mapped from old tokens for inline styles in TSX */
+  --sidebar-bg: #13151a;
+  --sidebar-accent: #3ecf73;
+  --gradient-start: rgba(62, 207, 115, 0.02);
+  --gradient-end: transparent;
+  --bg-glass: rgba(22, 24, 29, 0.85);
+  --bg-glass-strong: rgba(22, 24, 29, 0.95);
+  --border-glow: rgba(62, 207, 115, 0.1);
+  --shimmer: transparent;
+  --plasma-a: #3ecf73;
+  --plasma-b: #3ecf73;
+  --plasma-c: #3ecf73;
+  --surface-noise: transparent;
+  --blue-rgb: 99, 102, 241;
+  --purple-rgb: 139, 92, 246;
+}
+
+/* ── Light theme ────────────────────────────────────────────────── */
+[data-theme="light"] {
+  --bg: #f5f5f7;
+  --bg-card: #ffffff;
+  --bg-elevated: #f0f0f3;
+  --bg-hover: #e8e8ec;
+  --border: #d4d4d8;
+  --border-subtle: #e4e4e8;
+  --text: #1a1a2e;
+  --text-dim: #6b6b80;
+  --text-muted: #9898a8;
+  --text-title: #1a1a2e;
+  --text-label: #6b6b80;
+  --accent: #2a9d58;
+  --accent-dim: #238a4c;
+  --accent-muted: rgba(42, 157, 88, 0.1);
+  --accent-glow: rgba(42, 157, 88, 0.06);
+  --green: #16a34a;
+  --red: #dc2626;
+  --yellow: #ca8a04;
+  --secondary: #2a9d58;
+  --secondary-dim: #238a4c;
+  --accent-rgb: 42, 157, 88;
+  --green-rgb: 22, 163, 74;
+  --red-rgb: 220, 38, 38;
+  --yellow-rgb: 202, 138, 4;
+  --sidebar-bg: #ebebef;
+  --sidebar-accent: #2a9d58;
+  --bg-glass: rgba(255, 255, 255, 0.85);
+  --bg-glass-strong: rgba(255, 255, 255, 0.95);
+  --border-glow: rgba(42, 157, 88, 0.15);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.1);
+}

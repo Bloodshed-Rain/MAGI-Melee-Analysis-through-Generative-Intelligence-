@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { PlayerRadar } from "../components/RadarChart";
-import { useGlitchText } from "../hooks";
 import { computeRadarStats, type RadarStats } from "../radarStats";
 
 interface MatchupRecord {
@@ -59,22 +58,20 @@ function getArchetype(stats: RadarStats): { name: string; description: string } 
 }
 
 function EntropyBar({ label, value, description }: { label: string; value: number; description: string }) {
-  // Entropy 0 = completely predictable, ~1.5+ = highly mixed
-  // Normalize to 0-100 where 100 = max mixup
   const pct = Math.min(100, (value / 1.6) * 100);
   const color = pct < 30 ? "var(--red)" : pct < 60 ? "var(--yellow)" : "var(--green)";
-  const verdict = pct < 30 ? "PREDICTABLE" : pct < 60 ? "MODERATE" : "MIXED UP";
+  const verdict = pct < 30 ? "Predictable" : pct < 60 ? "Moderate" : "Well mixed";
 
   return (
-    <div style={{ marginBottom: 14 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }}>
-        <span style={{ fontSize: 11, fontWeight: 700, fontFamily: "var(--font-mono)", letterSpacing: "1px", textTransform: "uppercase" }}>{label}</span>
-        <span style={{ fontSize: 10, fontWeight: 800, fontFamily: "var(--font-mono)", color }}>{verdict}</span>
+    <div className="profile-entropy-item">
+      <div className="profile-entropy-header">
+        <span className="profile-entropy-label">{label}</span>
+        <span className="profile-entropy-verdict" style={{ color }}>{verdict}</span>
       </div>
       <div className="winrate-bar" style={{ height: 6 }}>
         <div className="winrate-bar-fill" style={{ width: `${pct}%`, background: color }} />
       </div>
-      <div style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 3, fontFamily: "var(--font-mono)" }}>{description}</div>
+      <div className="profile-entropy-desc">{description}</div>
     </div>
   );
 }
@@ -102,9 +99,9 @@ function HabitPanel() {
 
   return (
     <div className="card">
-      <div className="card-title">HABIT PREDICTABILITY</div>
-      <p style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 14, fontFamily: "var(--font-mono)" }}>
-        Low entropy = your opponent can read you. Mix up your options.
+      <div className="card-title">Mixup Analysis</div>
+      <p className="profile-entropy-intro">
+        Low entropy means your opponent can read you. Mix up your options.
       </p>
       <EntropyBar label="After Ledge Grab" value={habits.ledge} description="Neutral getup, roll, jump, drop, attack variety" />
       <EntropyBar label="After Knockdown" value={habits.knockdown} description="Tech in place, tech roll, missed tech, getup attack variety" />
@@ -119,7 +116,6 @@ export function Profile({ refreshKey }: { refreshKey: number }) {
   const [stages, setStages] = useState<StageRecord[]>([]);
   const [radarStats, setRadarStats] = useState<RadarStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const title = useGlitchText("PROFILE", 500);
 
   useEffect(() => {
     async function load() {
@@ -142,13 +138,20 @@ export function Profile({ refreshKey }: { refreshKey: number }) {
     load();
   }, [refreshKey]);
 
-  if (loading) return <div className="loading"><div className="spinner" style={{ margin: "0 auto 12px" }} />LOADING OPERATOR PROFILE...</div>;
+  if (loading) {
+    return (
+      <div className="loading">
+        <div className="spinner" style={{ margin: "0 auto 12px" }} />
+        Loading profile...
+      </div>
+    );
+  }
 
   if (!record || record.totalGames === 0) {
     return (
       <div className="empty-state">
-        <h2>NO OPERATOR DATA</h2>
-        <p>Import replays to construct your combat profile.</p>
+        <h2>Not enough data</h2>
+        <p>Play at least 5 games to see your profile.</p>
       </div>
     );
   }
@@ -164,11 +167,11 @@ export function Profile({ refreshKey }: { refreshKey: number }) {
         transition={{ duration: 0.5 }}
       >
         <div className="page-header">
-          <h1>{title}</h1>
+          <h1>Profile</h1>
           {archetype && (
             <p>
-              // ARCHETYPE: <span style={{ fontFamily: "var(--font-display, var(--font-mono))", fontWeight: 800, color: "var(--accent)", letterSpacing: "2px" }}>{archetype.name}</span>
-              {" "}&mdash; {archetype.description}
+              <span className="profile-archetype-name">{archetype.name}</span>
+              {" \u2014 "}{archetype.description}
             </p>
           )}
         </div>
@@ -187,28 +190,28 @@ export function Profile({ refreshKey }: { refreshKey: number }) {
               <span className="profile-record-sep">-</span>
               <span className="record-loss"><CountUp target={record.losses} /></span>
             </div>
-            <div className="stat-label" style={{ textAlign: "center", marginTop: 8 }}>
-              <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700 }}>{record.totalGames}</span> ENGAGEMENTS
-              {" "}&middot;{" "}
-              <span style={{
-                fontFamily: "var(--font-mono)",
-                fontWeight: 800,
-                color: Number(winRate) >= 50 ? "var(--green)" : "var(--red)",
-              }}>
+            <div className="profile-record-sub">
+              <span className="profile-record-games">{record.totalGames}</span> games
+              {" \u00B7 "}
+              <span
+                className="profile-record-rate"
+                style={{ color: Number(winRate) >= 50 ? "var(--green)" : "var(--red)" }}
+              >
                 {winRate}%
-              </span>
+              </span>{" "}
+              win rate
             </div>
           </div>
           {radarStats && (
             <div className="profile-radar-card">
-              <div className="card-title">COMBAT PROFILE</div>
+              <div className="card-title">Skill Profile</div>
               <PlayerRadar stats={radarStats} />
             </div>
           )}
         </div>
       </motion.div>
 
-      {/* Habit Predictability — entropy-based */}
+      {/* Habit Predictability */}
       {radarStats && (
         <motion.div
           initial={{ opacity: 0, y: 24 }}
@@ -226,7 +229,7 @@ export function Profile({ refreshKey }: { refreshKey: number }) {
           transition={{ delay: 0.2, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
         >
           <div className="card">
-            <div className="card-title">MATCHUP RECORDS</div>
+            <div className="card-title">Matchups</div>
             <table className="data-table">
               <thead>
                 <tr>
@@ -247,18 +250,16 @@ export function Profile({ refreshKey }: { refreshKey: number }) {
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.25 + i * 0.025, duration: 0.35 }}
                     >
-                      <td style={{ fontWeight: 700 }}>{m.opponentCharacter}</td>
-                      <td style={{ fontFamily: "var(--font-mono)" }}>{m.totalGames}</td>
+                      <td style={{ fontWeight: 600 }}>{m.opponentCharacter}</td>
+                      <td className="mono-cell">{m.totalGames}</td>
                       <td>
                         <span className="record-win">{m.wins}</span>
                         {" - "}
                         <span className="record-loss">{m.losses}</span>
                       </td>
-                      <td style={{
-                        fontFamily: "var(--font-mono)",
-                        fontWeight: 800,
+                      <td className="mono-cell" style={{
+                        fontWeight: 700,
                         color: wr >= 60 ? "var(--green)" : wr >= 45 ? "var(--yellow)" : "var(--red)",
-                        textShadow: `0 0 8px ${wr >= 60 ? "rgba(var(--green-rgb), 0.2)" : wr >= 45 ? "rgba(var(--yellow-rgb), 0.2)" : "rgba(var(--red-rgb), 0.2)"}`,
                       }}>
                         {wr.toFixed(0)}%
                       </td>
@@ -283,7 +284,7 @@ export function Profile({ refreshKey }: { refreshKey: number }) {
           transition={{ delay: 0.35, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
         >
           <div className="card">
-            <div className="card-title">STAGE RECORDS</div>
+            <div className="card-title">Stage Stats</div>
             <table className="data-table">
               <thead>
                 <tr>
@@ -304,18 +305,16 @@ export function Profile({ refreshKey }: { refreshKey: number }) {
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.4 + i * 0.025, duration: 0.35 }}
                     >
-                      <td style={{ fontWeight: 700 }}>{s.stage}</td>
-                      <td style={{ fontFamily: "var(--font-mono)" }}>{s.totalGames}</td>
+                      <td style={{ fontWeight: 600 }}>{s.stage}</td>
+                      <td className="mono-cell">{s.totalGames}</td>
                       <td>
                         <span className="record-win">{s.wins}</span>
                         {" - "}
                         <span className="record-loss">{s.losses}</span>
                       </td>
-                      <td style={{
-                        fontFamily: "var(--font-mono)",
-                        fontWeight: 800,
+                      <td className="mono-cell" style={{
+                        fontWeight: 700,
                         color: wr >= 60 ? "var(--green)" : wr >= 45 ? "var(--yellow)" : "var(--red)",
-                        textShadow: `0 0 8px ${wr >= 60 ? "rgba(var(--green-rgb), 0.2)" : wr >= 45 ? "rgba(var(--yellow-rgb), 0.2)" : "rgba(var(--red-rgb), 0.2)"}`,
                       }}>
                         {wr.toFixed(0)}%
                       </td>

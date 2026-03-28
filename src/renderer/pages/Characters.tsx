@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import { PlayerRadar } from "../components/RadarChart";
-import { useGlitchText } from "../hooks";
 import { computeRadarStats, type RadarStats } from "../radarStats";
 
 // Character card art imports (MAGI-branded cards)
@@ -79,35 +78,35 @@ const CHARACTER_META: Record<string, {
   color: string;
   glowColor: string;
 }> = {
-  Fox:              { emoji: "🦊", color: "#ff6b35", glowColor: "rgba(255, 107, 53, 0.15)" },
-  Falco:            { emoji: "🦅", color: "#4a7cff", glowColor: "rgba(74, 124, 255, 0.15)" },
-  Marth:            { emoji: "⚔️",  color: "#6b8cff", glowColor: "rgba(107, 140, 255, 0.15)" },
-  Sheik:            { emoji: "🥷", color: "#8b5cf6", glowColor: "rgba(139, 92, 246, 0.15)" },
-  Falcon:           { emoji: "🦅", color: "#f59e0b", glowColor: "rgba(245, 158, 11, 0.15)" },
-  Puff:             { emoji: "🎀", color: "#ec4899", glowColor: "rgba(236, 72, 153, 0.15)" },
-  Peach:            { emoji: "🍑", color: "#f472b6", glowColor: "rgba(244, 114, 182, 0.15)" },
-  ICs:              { emoji: "🧊", color: "#67e8f9", glowColor: "rgba(103, 232, 249, 0.15)" },
-  Samus:            { emoji: "🔫", color: "#f97316", glowColor: "rgba(249, 115, 22, 0.15)" },
-  Pikachu:          { emoji: "⚡", color: "#facc15", glowColor: "rgba(250, 204, 21, 0.15)" },
-  Luigi:            { emoji: "🟢", color: "#22c55e", glowColor: "rgba(34, 197, 94, 0.15)" },
-  Mario:            { emoji: "🔴", color: "#ef4444", glowColor: "rgba(239, 68, 68, 0.15)" },
-  Doc:              { emoji: "💊", color: "#f8fafc", glowColor: "rgba(248, 250, 252, 0.15)" },
-  Yoshi:            { emoji: "🦎", color: "#4ade80", glowColor: "rgba(74, 222, 128, 0.15)" },
-  Ganon:            { emoji: "👊", color: "#7c3aed", glowColor: "rgba(124, 58, 237, 0.15)" },
-  Link:             { emoji: "🗡️",  color: "#22c55e", glowColor: "rgba(34, 197, 94, 0.15)" },
-  YLink:            { emoji: "🏹", color: "#84cc16", glowColor: "rgba(132, 204, 22, 0.15)" },
-  Zelda:            { emoji: "✨", color: "#c084fc", glowColor: "rgba(192, 132, 252, 0.15)" },
-  Roy:              { emoji: "🔥", color: "#dc2626", glowColor: "rgba(220, 38, 38, 0.15)" },
-  Mewtwo:           { emoji: "🔮", color: "#a78bfa", glowColor: "rgba(167, 139, 250, 0.15)" },
-  "G&W":            { emoji: "🔔", color: "#1e293b", glowColor: "rgba(30, 41, 59, 0.15)" },
-  Ness:             { emoji: "🧢", color: "#ef4444", glowColor: "rgba(239, 68, 68, 0.15)" },
-  Bowser:           { emoji: "🐢", color: "#65a30d", glowColor: "rgba(101, 163, 13, 0.15)" },
-  Kirby:            { emoji: "🩷", color: "#fb7185", glowColor: "rgba(251, 113, 133, 0.15)" },
-  DK:               { emoji: "🦍", color: "#92400e", glowColor: "rgba(146, 64, 14, 0.15)" },
-  Pichu:            { emoji: "⚡", color: "#facc15", glowColor: "rgba(250, 204, 21, 0.15)" },
+  Fox:              { emoji: "\ud83e\udd8a", color: "#ff6b35", glowColor: "rgba(255, 107, 53, 0.15)" },
+  Falco:            { emoji: "\ud83e\udd85", color: "#4a7cff", glowColor: "rgba(74, 124, 255, 0.15)" },
+  Marth:            { emoji: "\u2694\ufe0f",  color: "#6b8cff", glowColor: "rgba(107, 140, 255, 0.15)" },
+  Sheik:            { emoji: "\ud83e\udd77", color: "#8b5cf6", glowColor: "rgba(139, 92, 246, 0.15)" },
+  Falcon:           { emoji: "\ud83e\udd85", color: "#f59e0b", glowColor: "rgba(245, 158, 11, 0.15)" },
+  Puff:             { emoji: "\ud83c\udf80", color: "#ec4899", glowColor: "rgba(236, 72, 153, 0.15)" },
+  Peach:            { emoji: "\ud83c\udf51", color: "#f472b6", glowColor: "rgba(244, 114, 182, 0.15)" },
+  ICs:              { emoji: "\ud83e\uddca", color: "#67e8f9", glowColor: "rgba(103, 232, 249, 0.15)" },
+  Samus:            { emoji: "\ud83d\udd2b", color: "#f97316", glowColor: "rgba(249, 115, 22, 0.15)" },
+  Pikachu:          { emoji: "\u26a1", color: "#facc15", glowColor: "rgba(250, 204, 21, 0.15)" },
+  Luigi:            { emoji: "\ud83d\udfe2", color: "#22c55e", glowColor: "rgba(34, 197, 94, 0.15)" },
+  Mario:            { emoji: "\ud83d\udd34", color: "#ef4444", glowColor: "rgba(239, 68, 68, 0.15)" },
+  Doc:              { emoji: "\ud83d\udc8a", color: "#f8fafc", glowColor: "rgba(248, 250, 252, 0.15)" },
+  Yoshi:            { emoji: "\ud83e\udd8e", color: "#4ade80", glowColor: "rgba(74, 222, 128, 0.15)" },
+  Ganon:            { emoji: "\ud83d\udc4a", color: "#7c3aed", glowColor: "rgba(124, 58, 237, 0.15)" },
+  Link:             { emoji: "\ud83d\udde1\ufe0f",  color: "#22c55e", glowColor: "rgba(34, 197, 94, 0.15)" },
+  YLink:            { emoji: "\ud83c\udff9", color: "#84cc16", glowColor: "rgba(132, 204, 22, 0.15)" },
+  Zelda:            { emoji: "\u2728", color: "#c084fc", glowColor: "rgba(192, 132, 252, 0.15)" },
+  Roy:              { emoji: "\ud83d\udd25", color: "#dc2626", glowColor: "rgba(220, 38, 38, 0.15)" },
+  Mewtwo:           { emoji: "\ud83d\udd2e", color: "#a78bfa", glowColor: "rgba(167, 139, 250, 0.15)" },
+  "G&W":            { emoji: "\ud83d\udd14", color: "#1e293b", glowColor: "rgba(30, 41, 59, 0.15)" },
+  Ness:             { emoji: "\ud83e\udde2", color: "#ef4444", glowColor: "rgba(239, 68, 68, 0.15)" },
+  Bowser:           { emoji: "\ud83d\udc22", color: "#65a30d", glowColor: "rgba(101, 163, 13, 0.15)" },
+  Kirby:            { emoji: "\ud83e\ude77", color: "#fb7185", glowColor: "rgba(251, 113, 133, 0.15)" },
+  DK:               { emoji: "\ud83e\udd8d", color: "#92400e", glowColor: "rgba(146, 64, 14, 0.15)" },
+  Pichu:            { emoji: "\u26a1", color: "#facc15", glowColor: "rgba(250, 204, 21, 0.15)" },
 };
 
-const DEFAULT_META = { emoji: "🎮", color: "var(--accent)", glowColor: "var(--accent-glow)" };
+const DEFAULT_META = { emoji: "\ud83c\udfae", color: "var(--accent)", glowColor: "var(--accent-glow)" };
 
 function getMeta(character: string) {
   return CHARACTER_META[character] || DEFAULT_META;
@@ -134,16 +133,16 @@ function aggregateSignatureStats(rawStats: any[], characterName?: string): Signa
   const LABELS: Record<string, Record<string, { label: string; suffix?: string; highlight?: boolean }>> = {
     Fox: {
       multiShineCombos: { label: "Multi-Shine Combos", highlight: true },
-      waveshineToUpsmash: { label: "Waveshine → Upsmash" },
-      upthrowUpairs: { label: "Uthrow → Uair" },
-      upthrowUpairKills: { label: "Uthrow → Uair Kills", highlight: true },
-      drillShines: { label: "Drill → Shine" },
+      waveshineToUpsmash: { label: "Waveshine \u2192 Upsmash" },
+      upthrowUpairs: { label: "Uthrow \u2192 Uair" },
+      upthrowUpairKills: { label: "Uthrow \u2192 Uair Kills", highlight: true },
+      drillShines: { label: "Drill \u2192 Shine" },
       shineSpikeKills: { label: "Shine Spike Kills", highlight: true },
     },
     Falco: {
       pillarCombos: { label: "Pillar Combos", highlight: true },
       pillarKills: { label: "Pillar Kills", highlight: true },
-      shineGrabs: { label: "Shine → Grab" },
+      shineGrabs: { label: "Shine \u2192 Grab" },
       laserCount: { label: "Lasers Fired" },
     },
     Marth: {
@@ -160,8 +159,8 @@ function aggregateSignatureStats(rawStats: any[], characterName?: string): Signa
     },
     Falcon: {
       kneeKills: { label: "Knee Kills", highlight: true },
-      stompKnees: { label: "Stomp → Knee", highlight: true },
-      upthrowKnees: { label: "Uthrow → Knee Kills" },
+      stompKnees: { label: "Stomp \u2192 Knee", highlight: true },
+      upthrowKnees: { label: "Uthrow \u2192 Knee Kills" },
       techChaseGrabs: { label: "Tech Chase Grabs", highlight: true },
       gentlemanCount: { label: "Gentlemen" },
     },
@@ -338,7 +337,6 @@ export function Characters({ refreshKey }: { refreshKey: number }) {
   const [radarStats, setRadarStats] = useState<RadarStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
-  const title = useGlitchText("CHARACTERS", 500);
 
   useEffect(() => {
     async function load() {
@@ -379,7 +377,7 @@ export function Characters({ refreshKey }: { refreshKey: number }) {
     if (selected) loadDetail(selected);
   }, [selected, refreshKey, loadDetail]);
 
-  if (loading) return <div className="loading"><div className="spinner" style={{ margin: "0 auto 12px" }} />LOADING ARSENAL DATA...</div>;
+  if (loading) return <div className="loading"><div className="spinner" style={{ margin: "0 auto 12px" }} />Loading...</div>;
   if (characters.length === 0) {
     return (
       <div className="empty-state">
@@ -389,8 +387,8 @@ export function Characters({ refreshKey }: { refreshKey: number }) {
             <path d="M5.5 21v-2a5.5 5.5 0 0 1 13 0v2" />
           </svg>
         </div>
-        <h2>NO ARSENAL DATA</h2>
-        <p>Import replays to populate your character arsenal.</p>
+        <h2>No character data</h2>
+        <p>Play some games to see character stats.</p>
       </div>
     );
   }
@@ -399,30 +397,17 @@ export function Characters({ refreshKey }: { refreshKey: number }) {
   const meta = selected ? getMeta(selected) : DEFAULT_META;
   const pct = (v: number) => (v * 100).toFixed(1) + "%";
 
-  function handleCardMouseMove(e: React.MouseEvent<HTMLButtonElement>) {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
-    const y = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
-    e.currentTarget.style.setProperty("--mx", `${x}`);
-    e.currentTarget.style.setProperty("--my", `${y}`);
-  }
-
-  function handleCardMouseLeave(e: React.MouseEvent<HTMLButtonElement>) {
-    e.currentTarget.style.setProperty("--mx", "0");
-    e.currentTarget.style.setProperty("--my", "0");
-  }
-
   return (
     <div>
       <motion.div
-        initial={{ opacity: 0, x: -16 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.5 }}
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
       >
         <div className="page-header">
-          <h1>{title}</h1>
+          <h1>Characters</h1>
           <p>
-            // <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--accent)" }}>{characters.length}</span> WEAPONS IN ARSENAL
+            <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600, color: "var(--accent)" }}>{characters.length}</span> characters played
           </p>
         </div>
       </motion.div>
@@ -438,20 +423,17 @@ export function Characters({ refreshKey }: { refreshKey: number }) {
             return (
               <motion.div
                 key={c.character}
-                initial={{ opacity: 0, y: 24, scale: 0.93 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ delay: index * 0.04, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.03, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
               >
                 {cardImg ? (
                   <button
                     className="char-card char-card-art"
                     onClick={() => setSelected(c.character)}
-                    onMouseMove={handleCardMouseMove}
-                    onMouseLeave={handleCardMouseLeave}
                     style={{
                       "--char-color": cm.color,
                       "--char-glow": cm.glowColor,
-                      transform: `perspective(800px) rotateY(calc(var(--mx, 0) * 8deg)) rotateX(calc(var(--my, 0) * -8deg))`,
                     } as React.CSSProperties}
                   >
                     <img src={cardImg} alt={c.character} className="char-card-art-img" />
@@ -472,7 +454,7 @@ export function Characters({ refreshKey }: { refreshKey: number }) {
                       {" - "}
                       <span className="record-loss">{c.losses}L</span>
                     </div>
-                    <div className="char-card-games">{c.gamesPlayed} games · {wr}%</div>
+                    <div className="char-card-games">{c.gamesPlayed} games &middot; {wr}%</div>
                     <div className="char-card-baseline">
                       <span className="char-card-baseline-stat">{pct(c.avgNeutralWinRate)} NW</span>
                       <span className="char-card-baseline-stat">{pct(c.avgConversionRate)} CV</span>
@@ -492,19 +474,19 @@ export function Characters({ refreshKey }: { refreshKey: number }) {
           <motion.button
             className="char-back-btn"
             onClick={() => setSelected(null)}
-            whileHover={{ x: -4 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ x: -3 }}
+            whileTap={{ scale: 0.97 }}
           >
-            &lt; ALL CHARACTERS
+            &larr; All Characters
           </motion.button>
 
           <div className="char-detail-layout">
-            {/* Left column — hero card */}
+            {/* Left column -- hero card */}
             <motion.div
               className="char-detail-left"
-              initial={{ opacity: 0, x: -24 }}
+              initial={{ opacity: 0, x: -16 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
             >
               <div
                 className="char-hero-card"
@@ -518,7 +500,7 @@ export function Characters({ refreshKey }: { refreshKey: number }) {
                   <span className="record-loss">{selectedChar.losses}L</span>
                 </div>
                 <div className="char-hero-card-meta">
-                  {selectedChar.gamesPlayed} games · {pct(selectedChar.winRate)} win rate
+                  {selectedChar.gamesPlayed} games &middot; {pct(selectedChar.winRate)} win rate
                 </div>
                 <div className="char-hero-stats">
                   <div className="char-hero-stat">
@@ -556,36 +538,35 @@ export function Characters({ refreshKey }: { refreshKey: number }) {
             {/* Right column */}
             <motion.div
               className="char-detail-right"
-              initial={{ opacity: 0, x: 24 }}
+              initial={{ opacity: 0, x: 16 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.1, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ delay: 0.08, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
             >
               {detailLoading ? (
-                <div className="loading">LOADING INTEL...</div>
+                <div className="loading">Loading details...</div>
               ) : (
                 <>
                   {radarStats && (
                     <div className="card">
-                      <div className="card-title">SKILL PROFILE</div>
+                      <div className="card-title">Skill Profile</div>
                       <PlayerRadar stats={radarStats} />
                     </div>
                   )}
 
                   {signatureStats.length > 0 && (
                     <div className="card">
-                      <div className="card-title">SIGNATURE STATS</div>
+                      <div className="card-title">Signature Stats</div>
                       <div className="sig-grid">
                         {signatureStats.map((s, i) => (
                           <motion.div
                             key={s.label}
                             className={`sig-stat ${s.highlight ? "sig-stat-highlight" : ""}`}
                             style={s.highlight ? { borderColor: meta.color } : undefined}
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: i * 0.04, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                            whileHover={{ scale: 1.05, y: -2 }}
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: i * 0.03, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
                           >
-                            <div className="sig-stat-value" style={s.highlight ? { color: meta.color, textShadow: `0 0 20px ${meta.glowColor}` } : undefined}>
+                            <div className="sig-stat-value" style={s.highlight ? { color: meta.color } : undefined}>
                               {s.value}{s.suffix ?? ""}
                             </div>
                             <div className="sig-stat-label">{s.label}</div>
@@ -600,7 +581,7 @@ export function Characters({ refreshKey }: { refreshKey: number }) {
 
                   {matchups.length > 0 && (
                     <div className="card">
-                      <div className="card-title">MATCHUP RECORDS</div>
+                      <div className="card-title">Matchups</div>
                       <table className="data-table">
                         <thead>
                           <tr>
@@ -621,11 +602,11 @@ export function Characters({ refreshKey }: { refreshKey: number }) {
                             return (
                               <motion.tr
                                 key={m.opponentCharacter}
-                                initial={{ opacity: 0, x: -8 }}
+                                initial={{ opacity: 0, x: -6 }}
                                 animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: i * 0.025, duration: 0.35 }}
+                                transition={{ delay: i * 0.02, duration: 0.3 }}
                               >
-                                <td style={{ fontWeight: 700 }}>
+                                <td style={{ fontWeight: 600 }}>
                                   <span style={{ marginRight: 6 }}>{oppMeta.emoji}</span>
                                   {m.opponentCharacter}
                                 </td>
@@ -637,7 +618,7 @@ export function Characters({ refreshKey }: { refreshKey: number }) {
                                 </td>
                                 <td>
                                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                    <span style={{ fontFamily: "var(--font-mono)", fontWeight: 800, color: wrColor, fontSize: 13 }}>
+                                    <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: wrColor, fontSize: 13 }}>
                                       {pct(m.winRate)}
                                     </span>
                                     <div className="winrate-bar">
@@ -658,7 +639,7 @@ export function Characters({ refreshKey }: { refreshKey: number }) {
 
                   {stages.length > 0 && (
                     <div className="card">
-                      <div className="card-title">STAGE RECORDS</div>
+                      <div className="card-title">Stage Stats</div>
                       <table className="data-table">
                         <thead>
                           <tr>
@@ -671,14 +652,14 @@ export function Characters({ refreshKey }: { refreshKey: number }) {
                         <tbody>
                           {stages.map((s) => (
                             <tr key={s.stage}>
-                              <td style={{ fontWeight: 700 }}>{s.stage}</td>
+                              <td style={{ fontWeight: 600 }}>{s.stage}</td>
                               <td style={{ fontFamily: "var(--font-mono)" }}>{s.gamesPlayed}</td>
                               <td>
                                 <span className="record-win">{s.wins}W</span>
                                 {" - "}
                                 <span className="record-loss">{s.losses}L</span>
                               </td>
-                              <td style={{ fontFamily: "var(--font-mono)", fontWeight: 800 }}>{pct(s.winRate)}</td>
+                              <td style={{ fontFamily: "var(--font-mono)", fontWeight: 700 }}>{pct(s.winRate)}</td>
                             </tr>
                           ))}
                         </tbody>

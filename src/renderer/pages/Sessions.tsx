@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Markdown, { type Components } from "react-markdown";
-import { useGlitchText } from "../hooks";
 
 interface DetectedSet {
   opponentTag: string;
@@ -80,9 +79,7 @@ function makeTimestampComponents(): Components {
     a: ({ href, children }) => {
       if (href?.startsWith("timestamp:")) {
         return (
-          <span style={{ color: "var(--accent)", fontFamily: "var(--font-mono)", fontSize: 12 }}>
-            {children}
-          </span>
+          <span className="sessions-timestamp">{children}</span>
         );
       }
       return <a href={href}>{children}</a>;
@@ -90,12 +87,16 @@ function makeTimestampComponents(): Components {
   };
 }
 
+function rateColor(rate: number): string {
+  const pct = rate * 100;
+  return pct >= 60 ? "var(--green)" : pct >= 45 ? "var(--yellow)" : "var(--red)";
+}
+
 function WinRateIndicator({ rate }: { rate: number }) {
   const pct = rate * 100;
-  const color = pct >= 60 ? "var(--green)" : pct >= 45 ? "var(--yellow)" : "var(--red)";
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, fontSize: 13, color }}>
+    <div className="sessions-winrate-indicator">
+      <span className="sessions-winrate-value" style={{ color: rateColor(rate) }}>
         {pct.toFixed(0)}%
       </span>
       <div className="winrate-bar">
@@ -112,63 +113,35 @@ function BreakdownBar({ wins, losses, label }: { wins: number; losses: number; l
   const color = pct >= 60 ? "var(--green)" : pct >= 45 ? "var(--yellow)" : "var(--red)";
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-      <span style={{
-        fontFamily: "var(--font-mono)",
-        fontSize: 11,
-        color: "var(--text)",
-        width: 120,
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap",
-        flexShrink: 0,
-      }}>
-        {label}
-      </span>
-      <div style={{
-        flex: 1,
-        height: 6,
-        background: "var(--bg)",
-        borderRadius: 1,
-        overflow: "hidden",
-        position: "relative",
-      }}>
-        <div style={{
-          width: `${pct}%`,
-          height: "100%",
-          background: color,
-          borderRadius: 1,
-          transition: "width 0.5s cubic-bezier(0.22, 1, 0.36, 1)",
-          boxShadow: `0 0 8px ${color}40`,
-        }} />
+    <div className="sessions-breakdown-row">
+      <span className="sessions-breakdown-label">{label}</span>
+      <div className="sessions-breakdown-track">
+        <div
+          className="sessions-breakdown-fill"
+          style={{ width: `${pct}%`, background: color }}
+        />
       </div>
-      <span style={{
-        fontFamily: "var(--font-mono)",
-        fontSize: 11,
-        color,
-        fontWeight: 700,
-        width: 36,
-        textAlign: "right",
-        flexShrink: 0,
-      }}>
-        {pct.toFixed(0)}%
-      </span>
-      <span style={{
-        fontFamily: "var(--font-mono)",
-        fontSize: 10,
-        color: "var(--text-dim)",
-        width: 48,
-        textAlign: "right",
-        flexShrink: 0,
-      }}>
-        {wins}W-{losses}L
-      </span>
+      <span className="sessions-breakdown-pct" style={{ color }}>{pct.toFixed(0)}%</span>
+      <span className="sessions-breakdown-record">{wins}W-{losses}L</span>
     </div>
   );
 }
 
-/** The expanded opponent dossier panel */
-function OpponentDossier({
+function ResultBadge({ result }: { result: "W" | "L" | "T" }) {
+  const colorMap = { W: "var(--green)", L: "var(--red)", T: "var(--text-dim)" };
+  const bgMap = { W: "rgba(var(--green-rgb), 0.1)", L: "rgba(var(--red-rgb), 0.1)", T: "var(--bg-hover)" };
+  return (
+    <span
+      className="sessions-result-badge"
+      style={{ color: colorMap[result], background: bgMap[result] }}
+    >
+      {result}
+    </span>
+  );
+}
+
+/** The expanded opponent detail panel */
+function OpponentDetailPanel({
   detail,
   onClose,
   onRequestAnalysis,
@@ -198,148 +171,69 @@ function OpponentDossier({
       transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
       style={{ overflow: "hidden" }}
     >
-      <div style={{
-        padding: "20px 24px",
-        borderTop: "1px solid var(--border)",
-        background: "linear-gradient(180deg, rgba(var(--accent-rgb), 0.02) 0%, transparent 40%)",
-      }}>
-        {/* ── Rivalry header ── */}
-        <div style={{
-          display: "flex",
-          alignItems: "baseline",
-          justifyContent: "space-between",
-          marginBottom: 20,
-        }}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
-            <span style={{
-              fontFamily: "var(--font-display, var(--font-mono))",
-              fontSize: 10,
-              letterSpacing: "3px",
-              color: "var(--text-dim)",
-              textTransform: "uppercase",
-            }}>
-              RIVALRY DOSSIER
-            </span>
-            <h3 style={{
-              fontFamily: "var(--font-display, var(--font-mono))",
-              fontSize: 20,
-              fontWeight: 800,
-              color: "var(--text)",
-              letterSpacing: "1px",
-              margin: 0,
-            }}>
-              vs {detail.opponentTag}
-            </h3>
+      <div className="sessions-detail-body">
+        {/* Header */}
+        <div className="sessions-detail-header">
+          <div className="sessions-detail-title-group">
+            <h3 className="sessions-detail-title">vs {detail.opponentTag}</h3>
             {detail.opponentConnectCode && (
-              <span style={{
-                fontFamily: "var(--font-mono)",
-                fontSize: 11,
-                color: "var(--text-dim)",
-              }}>
-                {detail.opponentConnectCode}
-              </span>
+              <span className="sessions-detail-code">{detail.opponentConnectCode}</span>
             )}
           </div>
           <button
             onClick={onClose}
             aria-label="Close opponent detail"
-            style={{
-              background: "none",
-              border: "1px solid var(--border)",
-              color: "var(--text-dim)",
-              cursor: "pointer",
-              fontFamily: "var(--font-mono)",
-              fontSize: 11,
-              padding: "4px 10px",
-              letterSpacing: "1px",
-              clipPath: "var(--clip-corner-sm)",
-              transition: "color 0.2s, border-color 0.2s",
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.color = "var(--text)";
-              e.currentTarget.style.borderColor = "var(--text-dim)";
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.color = "var(--text-dim)";
-              e.currentTarget.style.borderColor = "var(--border)";
-            }}
+            className="btn sessions-close-btn"
           >
-            CLOSE
+            Close
           </button>
         </div>
 
-        {/* ── Stat cluster ── */}
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
-          gap: 12,
-          marginBottom: 24,
-        }}>
+        {/* Stat cluster */}
+        <div className="sessions-detail-stats">
           <div className="stat-box" style={{ textAlign: "center" }}>
             <div className="stat-value" style={{ color: recordColor, fontSize: 22 }}>
               {detail.wins}-{detail.losses}
             </div>
-            <div className="stat-label">RECORD</div>
+            <div className="stat-label">Record</div>
           </div>
           <div className="stat-box" style={{ textAlign: "center" }}>
             <div className="stat-value" style={{ color: recordColor, fontSize: 22 }}>
               {winPct.toFixed(0)}%
             </div>
-            <div className="stat-label">WIN RATE</div>
+            <div className="stat-label">Win Rate</div>
           </div>
           <div className="stat-box" style={{ textAlign: "center" }}>
-            <div className="stat-value" style={{ color: "var(--text)", fontSize: 22 }}>
+            <div className="stat-value" style={{ fontSize: 22 }}>
               {detail.totalGames}
             </div>
-            <div className="stat-label">GAMES</div>
+            <div className="stat-label">Games</div>
           </div>
           <div className="stat-box" style={{ textAlign: "center" }}>
             <div className="stat-value" style={{ color: "var(--accent)", fontSize: 22 }}>
               {detail.characterBreakdown.length}
             </div>
-            <div className="stat-label">CHARS USED</div>
+            <div className="stat-label">Characters Used</div>
           </div>
         </div>
 
-        {/* ── Stage & Character breakdowns side by side ── */}
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: detail.characterBreakdown.length > 1 ? "1fr 1fr" : "1fr",
-          gap: 16,
-          marginBottom: 24,
-        }}>
-          {/* Stage breakdown */}
+        {/* Stage & Character breakdowns side by side */}
+        <div
+          className="sessions-detail-breakdowns"
+          style={{ gridTemplateColumns: detail.characterBreakdown.length > 1 ? "1fr 1fr" : "1fr" }}
+        >
           {detail.stageBreakdown.length > 0 && (
             <div>
-              <div style={{
-                fontFamily: "var(--font-display, var(--font-mono))",
-                fontSize: 10,
-                letterSpacing: "2px",
-                color: "var(--text-dim)",
-                marginBottom: 10,
-                textTransform: "uppercase",
-              }}>
-                STAGE BREAKDOWN
-              </div>
+              <div className="sessions-section-label">Stages</div>
               {detail.stageBreakdown.map(s => (
                 <BreakdownBar key={s.stage} wins={s.wins} losses={s.losses} label={s.stage} />
               ))}
             </div>
           )}
 
-          {/* Character breakdown -- only show if opponent uses multiple characters */}
           {detail.characterBreakdown.length > 1 && (
             <div>
-              <div style={{
-                fontFamily: "var(--font-display, var(--font-mono))",
-                fontSize: 10,
-                letterSpacing: "2px",
-                color: "var(--text-dim)",
-                marginBottom: 10,
-                textTransform: "uppercase",
-              }}>
-                VS CHARACTER
-              </div>
+              <div className="sessions-section-label">vs Character</div>
               {detail.characterBreakdown.map(c => (
                 <BreakdownBar key={c.opponentCharacter} wins={c.wins} losses={c.losses} label={c.opponentCharacter} />
               ))}
@@ -347,17 +241,8 @@ function OpponentDossier({
           )}
         </div>
 
-        {/* ── Game history table ── */}
-        <div style={{
-          fontFamily: "var(--font-display, var(--font-mono))",
-          fontSize: 10,
-          letterSpacing: "2px",
-          color: "var(--text-dim)",
-          marginBottom: 10,
-          textTransform: "uppercase",
-        }}>
-          ENGAGEMENT HISTORY
-        </div>
+        {/* Game history table */}
+        <div className="sessions-section-label">Game History</div>
         <div className="data-table-wrap" style={{ maxHeight: 320, overflowY: "auto" }}>
           <table className="data-table">
             <colgroup>
@@ -387,55 +272,24 @@ function OpponentDossier({
                 const isWin = g.result === "win";
                 return (
                   <tr key={g.id}>
-                    <td style={{ fontFamily: "var(--font-mono)", fontSize: 11 }}>
+                    <td className="mono-cell">
                       {g.playedAt ? new Date(g.playedAt).toLocaleDateString() : ""}
                     </td>
-                    <td style={{ fontFamily: "var(--font-mono)", fontSize: 11 }}>
-                      {g.playerCharacter}
-                    </td>
-                    <td style={{ fontFamily: "var(--font-mono)", fontSize: 11 }}>
-                      {g.opponentCharacter}
-                    </td>
-                    <td style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-dim)" }}>
-                      {g.stage}
-                    </td>
+                    <td className="mono-cell">{g.playerCharacter}</td>
+                    <td className="mono-cell">{g.opponentCharacter}</td>
+                    <td className="mono-cell dim">{g.stage}</td>
                     <td>
-                      <span style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        width: 24,
-                        height: 24,
-                        fontSize: 10,
-                        fontWeight: 900,
-                        fontFamily: "var(--font-display, var(--font-mono))",
-                        letterSpacing: "1px",
-                        background: isWin ? "rgba(var(--green-rgb), 0.12)" : "rgba(var(--red-rgb), 0.12)",
-                        color: isWin ? "var(--green)" : "var(--red)",
-                        border: `1px solid ${isWin ? "rgba(var(--green-rgb), 0.25)" : "rgba(var(--red-rgb), 0.25)"}`,
-                        clipPath: "polygon(0 0, calc(100% - 3px) 0, 100% 3px, 100% 100%, 3px 100%, 0 calc(100% - 3px))",
-                      }}>
-                        {isWin ? "W" : "L"}
-                      </span>
-                      <span style={{
-                        fontFamily: "var(--font-mono)",
-                        fontSize: 10,
-                        color: "var(--text-dim)",
-                        marginLeft: 6,
-                      }}>
+                      <ResultBadge result={isWin ? "W" : "L"} />
+                      <span className="sessions-stock-count">
                         {g.playerFinalStocks}-{g.opponentFinalStocks}
                       </span>
                     </td>
-                    <td style={{
-                      fontFamily: "var(--font-mono)",
-                      fontSize: 11,
+                    <td className="mono-cell" style={{
                       color: g.neutralWinRate > 0.5 ? "var(--green)" : "var(--red)",
                     }}>
                       {(g.neutralWinRate * 100).toFixed(0)}%
                     </td>
-                    <td style={{
-                      fontFamily: "var(--font-mono)",
-                      fontSize: 11,
+                    <td className="mono-cell" style={{
                       color: Number.isFinite(g.openingsPerKill) && g.openingsPerKill <= 4
                         ? "var(--green)"
                         : g.openingsPerKill <= 7
@@ -444,9 +298,7 @@ function OpponentDossier({
                     }}>
                       {Number.isFinite(g.openingsPerKill) ? g.openingsPerKill.toFixed(1) : "\u2014"}
                     </td>
-                    <td style={{
-                      fontFamily: "var(--font-mono)",
-                      fontSize: 11,
+                    <td className="mono-cell" style={{
                       color: g.edgeguardSuccessRate > 0.6 ? "var(--green)" : g.edgeguardSuccessRate > 0.3 ? "var(--yellow)" : "var(--red)",
                     }}>
                       {(g.edgeguardSuccessRate * 100).toFixed(0)}%
@@ -458,26 +310,25 @@ function OpponentDossier({
           </table>
         </div>
 
-        {/* ── AI matchup analysis ── */}
-        <div style={{ marginTop: 20 }}>
+        {/* AI matchup analysis */}
+        <div className="sessions-analysis-section">
           <button
             className="btn"
             onClick={onRequestAnalysis}
             disabled={isAnalyzing}
-            style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11 }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 2L2 7l10 5 10-5-10-5z" />
               <path d="M2 17l10 5 10-5" />
               <path d="M2 12l10 5 10-5" />
             </svg>
-            {isAnalyzing ? "ANALYZING RIVALRY..." : "REQUEST MATCHUP ANALYSIS"}
+            {isAnalyzing ? "Analyzing matchup..." : "Request Matchup Analysis"}
           </button>
 
           {isAnalyzing && !isStreaming && !streamingText && (
             <div className="analyze-loading" style={{ marginTop: 12 }}>
               <div className="spinner" />
-              <span>MAGI COMPILING RIVALRY INTELLIGENCE...</span>
+              <span>Generating matchup analysis...</span>
             </div>
           )}
 
@@ -491,9 +342,7 @@ function OpponentDossier({
           )}
 
           {analysisError && !analysisText && !streamingText && (
-            <p style={{ color: "var(--red)", fontSize: 13, fontFamily: "var(--font-mono)", marginTop: 12 }}>
-              {analysisError}
-            </p>
+            <p className="sessions-error">{analysisError}</p>
           )}
 
           {analysisText && (
@@ -515,7 +364,6 @@ export function Sessions({ refreshKey }: { refreshKey: number }) {
   const [opponents, setOpponents] = useState<OpponentRecord[]>([]);
   const [opponentSearch, setOpponentSearch] = useState("");
   const [loading, setLoading] = useState(true);
-  const title = useGlitchText("SESSIONS", 500);
 
   // Opponent detail state
   const [expandedOpponent, setExpandedOpponent] = useState<string | null>(null);
@@ -620,13 +468,20 @@ export function Sessions({ refreshKey }: { refreshKey: number }) {
     }
   }, [opponentDetail, expandedOpponent, matchupAnalysis]);
 
-  if (loading) return <div className="loading"><div className="spinner" style={{ margin: "0 auto 12px" }} />LOADING SESSION DATA...</div>;
+  if (loading) {
+    return (
+      <div className="loading">
+        <div className="spinner" style={{ margin: "0 auto 12px" }} />
+        Loading session data...
+      </div>
+    );
+  }
 
   if (sets.length === 0 && opponents.length === 0) {
     return (
       <div className="empty-state">
-        <h2>NO SESSIONS DETECTED</h2>
-        <p>Import replays to populate your engagement history.</p>
+        <h2>No sessions yet</h2>
+        <p>Import replays to see your sets and opponents here.</p>
       </div>
     );
   }
@@ -639,10 +494,11 @@ export function Sessions({ refreshKey }: { refreshKey: number }) {
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       >
-        <h1>{title}</h1>
+        <h1>Sessions</h1>
         <p>
-          // <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--accent)" }}>{sets.length}</span> SETS DETECTED |{" "}
-          <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--accent)" }}>{opponents.length}</span> UNIQUE TARGETS
+          <span className="sessions-accent-num">{sets.length}</span> sets
+          {" \u00B7 "}
+          <span className="sessions-accent-num">{opponents.length}</span> opponents
         </p>
       </motion.div>
 
@@ -655,7 +511,7 @@ export function Sessions({ refreshKey }: { refreshKey: number }) {
             className={`tab ${view === v ? "active" : ""}`}
             onClick={() => setView(v)}
           >
-            {v === "sets" ? "SETS" : "OPPONENTS"}
+            {v === "sets" ? "Sets" : "Opponents"}
           </button>
         ))}
       </div>
@@ -671,7 +527,7 @@ export function Sessions({ refreshKey }: { refreshKey: number }) {
             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
           >
             {sets.length === 0 ? (
-              <p style={{ color: "var(--text-dim)", fontFamily: "var(--font-mono)", fontSize: 12 }}>No sets detected yet.</p>
+              <p className="sessions-empty-msg">No sets detected yet.</p>
             ) : (
               <div className="data-table-wrap">
               <table className="data-table">
@@ -699,12 +555,12 @@ export function Sessions({ refreshKey }: { refreshKey: number }) {
                     const result = set.wins > set.losses ? "W" : set.losses > set.wins ? "L" : "T";
                     return (
                       <tr key={i}>
-                        <td style={{ fontFamily: "var(--font-mono)", fontSize: 12 }}>
+                        <td className="mono-cell">
                           {new Date(set.startedAt).toLocaleDateString()}
                         </td>
-                        <td style={{ fontWeight: 700 }}>{set.opponentTag}</td>
-                        <td style={{ fontFamily: "var(--font-mono)", fontSize: 12 }}>{set.opponentCharacter}</td>
-                        <td style={{ fontFamily: "var(--font-mono)" }}>{total}</td>
+                        <td style={{ fontWeight: 600 }}>{set.opponentTag}</td>
+                        <td className="mono-cell">{set.opponentCharacter}</td>
+                        <td className="mono-cell">{total}</td>
                         <td>
                           <span className="record-win">{set.wins}</span>
                           {" - "}
@@ -717,24 +573,7 @@ export function Sessions({ refreshKey }: { refreshKey: number }) {
                           )}
                         </td>
                         <td>
-                          <span style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            width: 28,
-                            height: 28,
-                            fontSize: 11,
-                            fontWeight: 900,
-                            fontFamily: "var(--font-display, var(--font-mono))",
-                            letterSpacing: "1px",
-                            background: result === "W" ? "rgba(var(--green-rgb), 0.12)" : result === "L" ? "rgba(var(--red-rgb), 0.12)" : "var(--bg-hover)",
-                            color: result === "W" ? "var(--green)" : result === "L" ? "var(--red)" : "var(--text-dim)",
-                            border: `1px solid ${result === "W" ? "rgba(var(--green-rgb), 0.25)" : result === "L" ? "rgba(var(--red-rgb), 0.25)" : "var(--border)"}`,
-                            boxShadow: result === "W" ? "0 0 12px rgba(var(--green-rgb), 0.15)" : result === "L" ? "0 0 12px rgba(var(--red-rgb), 0.15)" : "none",
-                            clipPath: "polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 4px 100%, 0 calc(100% - 4px))",
-                          }}>
-                            {result}
-                          </span>
+                          <ResultBadge result={result as "W" | "L" | "T"} />
                         </td>
                       </tr>
                     );
@@ -760,25 +599,15 @@ export function Sessions({ refreshKey }: { refreshKey: number }) {
                   value={opponentSearch}
                   onChange={(e) => setOpponentSearch(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                  placeholder="SEARCH BY TAG OR CONNECT CODE..."
-                  style={{
-                    flex: 1,
-                    padding: "10px 16px",
-                    border: "1px solid var(--border)",
-                    background: "var(--bg)",
-                    color: "var(--text)",
-                    fontSize: 12,
-                    fontFamily: "var(--font-mono)",
-                    letterSpacing: "1px",
-                    clipPath: "polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))",
-                  }}
+                  placeholder="Search by tag or connect code..."
+                  className="sessions-search-input"
                 />
-                <button className="btn" onClick={handleSearch}>SEARCH</button>
+                <button className="btn" onClick={handleSearch}>Search</button>
               </div>
             </div>
             <div className="card">
               {opponents.length === 0 ? (
-                <p style={{ color: "var(--text-dim)", fontFamily: "var(--font-mono)", fontSize: 12 }}>No targets found.</p>
+                <p className="sessions-empty-msg">No opponents found.</p>
               ) : (
                 <div className="data-table-wrap">
                 <table className="data-table">
@@ -813,41 +642,34 @@ export function Sessions({ refreshKey }: { refreshKey: number }) {
                           tabIndex={0}
                           onClick={() => handleOpponentClick(o)}
                           onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleOpponentClick(o); } }}
-                          style={{
-                            cursor: "pointer",
-                            background: isExpanded ? "rgba(var(--accent-rgb), 0.04)" : undefined,
-                          }}
+                          className={isExpanded ? "sessions-row-expanded" : undefined}
                           aria-expanded={isExpanded}
                         >
-                          <td style={{ fontWeight: 700 }}>
-                            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <td style={{ fontWeight: 600 }}>
+                            <span className="sessions-opponent-name">
                               <motion.span
                                 animate={{ rotate: isExpanded ? 90 : 0 }}
                                 transition={{ duration: 0.2 }}
-                                style={{
-                                  display: "inline-block",
-                                  fontSize: 8,
-                                  color: isExpanded ? "var(--accent)" : "var(--text-dim)",
-                                  lineHeight: 1,
-                                }}
+                                className="sessions-chevron"
+                                style={{ color: isExpanded ? "var(--accent)" : "var(--text-dim)" }}
                               >
                                 {"\u25B6"}
                               </motion.span>
                               {o.opponentTag}
                             </span>
                           </td>
-                          <td style={{ color: "var(--text-dim)", fontFamily: "var(--font-mono)", fontSize: 12 }}>
+                          <td className="mono-cell dim">
                             {o.opponentConnectCode ?? ""}
                           </td>
-                          <td style={{ fontFamily: "var(--font-mono)", fontSize: 12 }}>{o.characters}</td>
-                          <td style={{ fontFamily: "var(--font-mono)" }}>{o.totalGames}</td>
+                          <td className="mono-cell">{o.characters}</td>
+                          <td className="mono-cell">{o.totalGames}</td>
                           <td>
                             <span className="record-win">{o.wins}</span>
                             {" - "}
                             <span className="record-loss">{o.losses}</span>
                           </td>
                           <td><WinRateIndicator rate={o.winRate} /></td>
-                          <td style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--text-dim)" }}>
+                          <td className="mono-cell dim">
                             {o.lastPlayed ? new Date(o.lastPlayed).toLocaleDateString() : ""}
                           </td>
                         </tr>
@@ -872,15 +694,13 @@ export function Sessions({ refreshKey }: { refreshKey: number }) {
                   transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
                 >
                   {detailLoading && (
-                    <div style={{ padding: 24, display: "flex", alignItems: "center", gap: 12 }}>
+                    <div className="sessions-detail-loading">
                       <div className="spinner" />
-                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--text-dim)" }}>
-                        LOADING RIVAL INTELLIGENCE...
-                      </span>
+                      <span>Loading opponent data...</span>
                     </div>
                   )}
                   {!detailLoading && opponentDetail && (
-                    <OpponentDossier
+                    <OpponentDetailPanel
                       detail={opponentDetail}
                       onClose={() => { setExpandedOpponent(null); setOpponentDetail(null); }}
                       onRequestAnalysis={handleRequestMatchupAnalysis}
@@ -892,8 +712,8 @@ export function Sessions({ refreshKey }: { refreshKey: number }) {
                     />
                   )}
                   {!detailLoading && !opponentDetail && (
-                    <div style={{ padding: 24, fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--text-dim)" }}>
-                      NO DATA FOUND FOR THIS OPPONENT.
+                    <div className="sessions-detail-loading">
+                      No data found for this opponent.
                     </div>
                   )}
                 </motion.div>

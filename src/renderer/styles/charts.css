@@ -1,0 +1,35 @@
+/* ── Chart Styles ─────────────────────────────────────────────── */
+
+/* Recharts tooltip override */
+.recharts-tooltip-wrapper {
+  outline: none;
+}
+
+.recharts-default-tooltip {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-md) !important;
+  padding: 8px 12px !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+
+/* Gauge SVG styling */
+.stat-box svg circle {
+  transition: stroke-dashoffset 1s var(--ease-spring);
+}
+
+/* Chart card spacing */
+.card .recharts-responsive-container {
+  margin-top: 8px;
+}
+
+/* Recharts axis text */
+.recharts-cartesian-axis-tick text {
+  fill: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 9px;
+}
+
+.recharts-cartesian-grid line {
+  stroke: var(--border-subtle);
+}

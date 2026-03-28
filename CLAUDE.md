@@ -22,9 +22,9 @@ MAGI (Melee Analysis through Generative Intelligence) is an Electron + React des
 
 Three processes communicate via IPC:
 
-- **Main** (`src/main/index.ts`): Electron main process. Handles all IPC handlers (`ipcMain.handle`), orchestrates pipeline/LLM calls, manages file watcher, reads/writes config and DB.
+- **Main** (`src/main/index.ts`): Electron main process. IPC handlers split into `src/main/handlers/` (llm, stats, dolphin, config, import, analysis, dialog, watcher, stockTimeline). Shared state in `src/main/state.ts`.
 - **Preload** (`src/preload/index.ts`): Bridges main↔renderer via `contextBridge`. Exposes `window.api` with typed IPC invoke wrappers.
-- **Renderer** (`src/renderer/`): React SPA built with Vite. Pages in `src/renderer/pages/`, components in `src/renderer/components/`. Uses react-router-dom for routing.
+- **Renderer** (`src/renderer/`): React SPA built with Vite. Pages in `src/renderer/pages/`, components in `src/renderer/components/`. Uses state-based page switching (no router library).
 
 ### Data Pipeline
 
@@ -42,13 +42,16 @@ Three processes communicate via IPC:
 
 - `src/llm.ts`: Multi-provider LLM abstraction (OpenRouter, Gemini, Anthropic, OpenAI, local). All share: system prompt + user prompt → text.
 - `src/llmQueue.ts`: Queued LLM calls to prevent concurrent overload
-- `src/db.ts`: SQLite via better-sqlite3. Data dir: `~/.magi-melee/`, DB file: `magi.db`. Tables: `player_profile`, `sessions`, `games`, `game_stats`, `coaching_analyses`, `signature_stats`.
+- `src/db.ts`: SQLite via better-sqlite3. Data dir: `~/.magi-melee/`, DB file: `magi.db`. Tables: `player_profile`, `sessions`, `games`, `game_stats`, `coaching_analyses`, `practice_plans`, `character_signature_stats`, `schema_version`.
 - `src/config.ts`: JSON config at `~/.magi-melee/config.json`. Stores target player, API keys, replay folder, theme.
 - `src/importer.ts`: Bulk imports replay folders, hashes files for dedup, inserts into DB, optionally triggers LLM analysis.
 - `src/replayAnalyzer.ts`: Single-replay analysis with DB caching (hash-based dedup, skips LLM if cached).
 - `src/watcher.ts`: chokidar file watcher for live replay folder monitoring.
 - `src/detect-sets.ts`: Groups replays into tournament-style sets by player matchup and time proximity.
 - `src/parsePool.ts` / `src/parseWorker.ts`: Worker-based parallel .slp parsing.
+- `src/player-profile.ts`: Player profile management (archetype detection, radar stats).
+- `src/stats.ts`: Stat computation helpers for DB queries and trend data.
+- `src/setup.ts`: First-run setup and migration logic.
 
 ### Renderer Pages
 

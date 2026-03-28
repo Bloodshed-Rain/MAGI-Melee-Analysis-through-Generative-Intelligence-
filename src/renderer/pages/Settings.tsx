@@ -1,5 +1,4 @@
 import { useEffect, useState, useCallback } from "react";
-import { useGlitchText } from "../hooks";
 // Themes are now controlled by the sidebar dark/light toggle
 
 interface Config {
@@ -23,7 +22,7 @@ interface ModelOption {
 }
 
 const MODELS: ModelOption[] = [
-  { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash", description: "Free tier — works out of the box" },
+  { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash", description: "Default \u2014 free API key from Google AI Studio" },
   { id: "deepseek/deepseek-chat", label: "DeepSeek V3", description: "Best cost/quality ratio (requires OpenRouter key)" },
   { id: "openai/gpt-4o-mini", label: "GPT-4o Mini", description: "Reliable and efficient (requires OpenAI key)" },
 ];
@@ -96,7 +95,6 @@ export function Settings({ onImport }: SettingsProps) {
     return unsub;
   }, [watching, onImport]);
 
-  const title = useGlitchText("SETTINGS", 500);
   const selectedModel = config.llmModelId || DEFAULT_MODEL_ID;
 
   const handleSave = useCallback(async () => {
@@ -180,10 +178,8 @@ export function Settings({ onImport }: SettingsProps) {
   return (
     <div>
       <div className="page-header">
-        <h1>{title}</h1>
+        <h1>Settings</h1>
       </div>
-
-
 
       <div className="card">
         <div className="card-title">Player</div>
@@ -234,20 +230,13 @@ export function Settings({ onImport }: SettingsProps) {
         </div>
         {importProgress && importing && (
           <div style={{ marginTop: 8 }}>
-            <div style={{
-              width: "100%",
-              height: 6,
-              background: "var(--bg-secondary, #1a1a2e)",
-              borderRadius: 3,
-              overflow: "hidden",
-            }}>
-              <div style={{
-                width: `${Math.round((importProgress.current / importProgress.total) * 100)}%`,
-                height: "100%",
-                background: "var(--accent, #00d4aa)",
-                borderRadius: 3,
-                transition: "width 0.15s ease-out",
-              }} />
+            <div className="progress-track">
+              <div
+                className="progress-fill"
+                style={{
+                  width: `${Math.round((importProgress.current / importProgress.total) * 100)}%`,
+                }}
+              />
             </div>
           </div>
         )}
@@ -260,7 +249,7 @@ export function Settings({ onImport }: SettingsProps) {
       <div className="card">
         <div className="card-title">Slippi Dolphin</div>
         <div className="settings-field">
-          <label>Dolphin Executable Path (optional — auto-detected if left blank)</label>
+          <label>Dolphin Executable Path (optional \u2014 auto-detected if left blank)</label>
           <div className="settings-row">
             <input
               value={config.dolphinPath ?? ""}
@@ -277,7 +266,7 @@ export function Settings({ onImport }: SettingsProps) {
           </div>
         </div>
         <div className="settings-field">
-          <label>Melee ISO Path (vanilla NTSC 1.02 — needed for replay playback)</label>
+          <label>Melee ISO Path (vanilla NTSC 1.02 \u2014 needed for replay playback)</label>
           <div className="settings-row">
             <input
               value={config.meleeIsoPath ?? ""}

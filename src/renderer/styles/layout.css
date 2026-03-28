@@ -1,0 +1,217 @@
+/* ── App Shell Layout ──────────────────────────────────────────── */
+
+.app-layout {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+/* ── Sidebar ──────────────────────────────────────────────────── */
+
+.sidebar {
+  width: var(--rail-width);
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0;
+  -webkit-app-region: drag;
+  z-index: 10;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.sidebar-brand {
+  padding: 24px 16px 20px;
+  -webkit-app-region: drag;
+  border-bottom: 1px solid var(--border);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 48px;
+  height: 48px;
+}
+
+.sidebar-logo-img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+/* Hide all the old orbit/glow decorations — they still exist in DOM */
+.logo-orbit,
+.logo-orbit-1,
+.logo-orbit-2,
+.logo-orbit-3,
+.logo-glow {
+  display: none;
+}
+
+.logo-wordmark {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  color: var(--text);
+  -webkit-app-region: no-drag;
+}
+
+.logo-subtitle {
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 2px;
+  color: var(--text-dim);
+  font-family: var(--font-sans);
+  -webkit-app-region: no-drag;
+}
+
+/* Remove the old blinking dot pseudo-element */
+.logo-subtitle::before {
+  display: none;
+}
+
+/* ── Navigation ───────────────────────────────────────────────── */
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  padding: 12px 8px;
+  flex: 1;
+  -webkit-app-region: no-drag;
+}
+
+.nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border: none;
+  border-left: 2px solid transparent;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: none;
+  cursor: pointer;
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.nav-item:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.nav-item.active {
+  background: var(--accent-muted);
+  color: var(--accent);
+  border-left-color: var(--accent);
+}
+
+/* Remove old pseudo-element decorations */
+.nav-item.active::before,
+.nav-item.active::after {
+  display: none;
+}
+
+.nav-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.nav-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  opacity: 0.6;
+  transition: opacity 0.15s ease;
+}
+
+.nav-item:hover .nav-icon { opacity: 0.85; }
+.nav-item.active .nav-icon { opacity: 1; }
+
+/* ── Sidebar Footer ───────────────────────────────────────────── */
+
+.sidebar-footer {
+  padding: 12px 0 16px;
+  border-top: 1px solid var(--border);
+  -webkit-app-region: no-drag;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.system-status {
+  font-size: 9px;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+  padding: 6px 0;
+  text-align: center;
+}
+
+.system-status::before {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+/* ── Main Content ─────────────────────────────────────────────── */
+
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-9) var(--space-11);
+  z-index: 1;
+  position: relative;
+  background: var(--bg);
+}
+
+/* ── Scrollbar ────────────────────────────────────────────────── */
+
+.main-content::-webkit-scrollbar { width: 6px; }
+.main-content::-webkit-scrollbar-track { background: transparent; }
+.main-content::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+.main-content::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* ── Background decorations — neutralized ─────────────────────── */
+
+.neural-mesh,
+.hex-grid,
+.scan-line,
+.particle-field,
+.particle {
+  display: none;
+}

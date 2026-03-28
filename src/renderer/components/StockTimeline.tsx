@@ -226,7 +226,7 @@ export function StockTimeline({
   return (
     <div className="stock-timeline-container">
       <div className="stock-timeline-header">
-        <span className="stock-timeline-title">STOCK TIMELINE</span>
+        <span className="stock-timeline-title">Stock Timeline</span>
         <span className="stock-timeline-duration">
           {Math.floor(data.gameDuration / 60)}:{String(Math.floor(data.gameDuration % 60)).padStart(2, "0")}
         </span>

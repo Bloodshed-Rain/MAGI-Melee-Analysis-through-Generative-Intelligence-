@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { useTypewriter, useGlitchText } from "../hooks";
+import { useTypewriter } from "../hooks";
 import { motion } from "framer-motion";
 import Markdown from "react-markdown";
 import {
@@ -68,27 +68,28 @@ function StatGauge({ value, label, format, color, higherBetter, delta, isPercent
         <circle cx="44" cy="44" r="36" fill="none" stroke="var(--border)" strokeWidth="4" />
         <circle
           cx="44" cy="44" r="36" fill="none"
-          stroke={color} strokeWidth="4" strokeLinecap="square"
+          stroke={color} strokeWidth="4" strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={strokeDashoffset}
           style={{
             transition: "stroke-dashoffset 1.2s cubic-bezier(0.22, 1, 0.36, 1)",
-            filter: `drop-shadow(0 0 8px ${color}50)`,
           }}
         />
       </svg>
       <div style={{ marginTop: -68, marginBottom: 26, textAlign: "center" }}>
-        <div className="stat-value" style={{ color, fontSize: 16, textShadow: `0 0 12px ${color}40` }}>{format(value)}</div>
+        <div style={{ color, fontSize: 16, fontWeight: 700, fontFamily: "var(--font-mono)" }}>{format(value)}</div>
       </div>
       <div style={{ textAlign: "center" }}>
-        <div className="stat-label" style={{ fontSize: 8 }}>{label}</div>
+        <div style={{ fontSize: 11, color: "var(--text-dim)", fontWeight: 500 }}>{label}</div>
         {!stable && (
-          <span
-            className={improving ? "trend-up" : "trend-down"}
-            style={{ fontSize: 10, fontFamily: "var(--font-mono)", fontWeight: 800 }}
-          >
-            {improving ? "+" : ""}
-            {isPercent ? (delta * 100).toFixed(1) + "pp" : delta.toFixed(1)}
+          <span style={{
+            fontSize: 11,
+            fontFamily: "var(--font-mono)",
+            fontWeight: 600,
+            color: improving ? "var(--green)" : "var(--red)",
+          }}>
+            {improving ? "\u2191 " : "\u2193 "}
+            {isPercent ? Math.abs(delta * 100).toFixed(1) + "pp" : Math.abs(delta).toFixed(1)}
           </span>
         )}
       </div>
@@ -163,18 +164,16 @@ function ChartTooltip({ active, payload, label, metric }: any) {
   if (!active || !payload || !payload.length) return null;
   return (
     <div style={{
-      background: "var(--bg-glass-strong)",
-      backdropFilter: "blur(12px)",
-      WebkitBackdropFilter: "blur(12px)",
-      border: "1px solid var(--border-glow)",
-      padding: "10px 14px",
-      boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
-      clipPath: "polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px))",
+      background: "var(--bg-card)",
+      border: "1px solid var(--border)",
+      borderRadius: 6,
+      padding: "8px 12px",
+      boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
     }}>
-      <div style={{ fontSize: 10, color: "var(--text-dim)", marginBottom: 4, fontFamily: "var(--font-mono)", letterSpacing: "1px" }}>
-        GAME {label}
+      <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 3 }}>
+        Game {label}
       </div>
-      <div style={{ fontSize: 14, fontWeight: 800, color: metric.color, fontFamily: "var(--font-mono)" }}>
+      <div style={{ fontSize: 14, fontWeight: 700, color: metric.color, fontFamily: "var(--font-mono)" }}>
         {metric.format(payload[0].value)}
       </div>
     </div>
@@ -188,7 +187,6 @@ export function Trends({ refreshKey }: { refreshKey: number }) {
   const { displayText: typedCommentary, isTyping } = useTypewriter(commentary ?? "", 4, !!commentary);
   const [analyzingTrends, setAnalyzingTrends] = useState(false);
   const [trendError, setTrendError] = useState<string | null>(null);
-  const title = useGlitchText("TRENDS", 500);
 
   useEffect(() => {
     async function load() {
@@ -217,13 +215,13 @@ export function Trends({ refreshKey }: { refreshKey: number }) {
     ),
   })), [chronological]);
 
-  if (loading) return <div className="loading"><div className="spinner" style={{ margin: "0 auto 12px" }} />LOADING TRAJECTORY DATA...</div>;
+  if (loading) return <div className="loading"><div className="spinner" style={{ margin: "0 auto 12px" }} />Loading trend data...</div>;
 
   if (games.length < 4) {
     return (
       <div className="empty-state">
-        <h2>INSUFFICIENT DATA</h2>
-        <p>Import at least 4 engagements to generate trend analysis.</p>
+        <h2>Not enough data</h2>
+        <p>Import at least 4 games to generate trend analysis.</p>
       </div>
     );
   }
@@ -253,23 +251,23 @@ export function Trends({ refreshKey }: { refreshKey: number }) {
   return (
     <div>
       <motion.div
-        initial={{ opacity: 0, x: -16 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.5 }}
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
       >
         <div className="page-header">
-          <h1>{title}</h1>
+          <h1>Trends</h1>
           <p>
-            // <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--accent)" }}>{chronological.length}</span> ENGAGEMENTS | 5-GAME ROLLING AVG
+            <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600, color: "var(--accent)" }}>{chronological.length}</span> games &middot; 5-game rolling average
           </p>
         </div>
       </motion.div>
 
       {/* MAGI Oracle */}
       <motion.div
-        initial={{ opacity: 0, y: 16 }}
+        initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1, duration: 0.5 }}
+        transition={{ delay: 0.1, duration: 0.4 }}
       >
         <div className="card clippi-card">
           <div className="clippi-header">
@@ -277,12 +275,12 @@ export function Trends({ refreshKey }: { refreshKey: number }) {
             <div>
               <div className="clippi-name">MAGI</div>
               <div className="clippi-subtitle">
-                {commentary ? "// TRAJECTORY ANALYSIS COMPLETE" : "// AWAITING ANALYSIS REQUEST"}
+                {commentary ? "Analysis complete" : "Ready to analyze trends"}
               </div>
             </div>
             {!commentary && !analyzingTrends && (
               <button className="btn btn-primary" style={{ marginLeft: "auto" }} onClick={handleGetCommentary}>
-                ANALYZE TRAJECTORY
+                Analyze Trends
               </button>
             )}
           </div>
@@ -290,12 +288,12 @@ export function Trends({ refreshKey }: { refreshKey: number }) {
           {analyzingTrends && (
             <div className="analyze-loading">
               <div className="spinner" />
-              <span>PROCESSING TRAJECTORY DATA...</span>
+              <span>Analyzing trends...</span>
             </div>
           )}
 
           {trendError && (
-            <p style={{ color: "var(--red)", fontSize: 12, marginTop: 12, fontFamily: "var(--font-mono)" }}>{trendError}</p>
+            <p style={{ color: "var(--red)", fontSize: 12, marginTop: 12 }}>{trendError}</p>
           )}
 
           {commentary && (
@@ -311,7 +309,7 @@ export function Trends({ refreshKey }: { refreshKey: number }) {
                   onClick={handleGetCommentary}
                   disabled={analyzingTrends}
                 >
-                  REFRESH ANALYSIS
+                  Refresh Analysis
                 </button>
               )}
             </div>
@@ -328,9 +326,9 @@ export function Trends({ refreshKey }: { refreshKey: number }) {
           return (
             <motion.div
               key={m.key}
-              initial={{ opacity: 0, scale: 0.9 }}
+              initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.15 + index * 0.06, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ delay: 0.15 + index * 0.04, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
             >
               <StatGauge
                 value={late}
@@ -351,9 +349,9 @@ export function Trends({ refreshKey }: { refreshKey: number }) {
       {METRICS.map((m, index) => (
         <motion.div
           key={m.key}
-          initial={{ opacity: 0, y: 24 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 + index * 0.04, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ delay: 0.3 + index * 0.03, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
         >
           <div className="card">
             <div className="card-title">{m.label}</div>
@@ -361,19 +359,19 @@ export function Trends({ refreshKey }: { refreshKey: number }) {
               <AreaChart data={chartData}>
                 <defs>
                   <linearGradient id={`grad-${m.key}`} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={m.color} stopOpacity={0.25} />
+                    <stop offset="0%" stopColor={m.color} stopOpacity={0.2} />
                     <stop offset="100%" stopColor={m.color} stopOpacity={0.01} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" />
                 <XAxis
                   dataKey="game"
-                  tick={{ fill: "var(--text-dim)", fontSize: 9, fontFamily: "var(--font-mono)" } as any}
+                  tick={{ fill: "var(--text-dim)", fontSize: 9 } as any}
                   axisLine={{ stroke: "var(--border)" }}
                   tickLine={false}
                 />
                 <YAxis
-                  tick={{ fill: "var(--text-dim)", fontSize: 9, fontFamily: "var(--font-mono)" } as any}
+                  tick={{ fill: "var(--text-dim)", fontSize: 9 } as any}
                   axisLine={{ stroke: "var(--border)" }}
                   tickLine={false}
                   tickFormatter={(v: number) => m.isPercent ? `${(v * 100).toFixed(0)}%` : v.toFixed(1)}

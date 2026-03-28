@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 
 /**
  * Returns a function that generates stagger animation delays for list items.
@@ -11,6 +11,7 @@ export function useStagger(delayMs: number = 40) {
 
 /**
  * Simulates a typewriter effect, revealing text character by character.
+ * Used for AI streaming responses.
  */
 export function useTypewriter(
   text: string,
@@ -72,68 +73,18 @@ export function useCountUp(target: number, duration: number = 1000) {
   return value;
 }
 
-// Glitch character set — module-level to avoid recreation per render
-const GLITCH_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
-
 /**
- * Generates a glitch-text effect: randomly distorts characters for a duration.
- * Used for page titles on mount for that "system boot" feel.
+ * @deprecated No-op shim kept for backward compatibility during migration.
+ * Pages that import this will just get the plain text back immediately.
+ * Remove imports as pages are individually rewritten.
  */
-export function useGlitchText(text: string, durationMs: number = 600, enabled: boolean = true) {
-  const [display, setDisplay] = useState(enabled ? "" : text);
-
-  useEffect(() => {
-    if (!enabled) { setDisplay(text); return; }
-    const start = performance.now();
-    let raf: number;
-
-    const tick = (now: number) => {
-      const elapsed = now - start;
-      const progress = Math.min(elapsed / durationMs, 1);
-
-      // Reveal characters left to right with random noise
-      const revealedCount = Math.floor(progress * text.length);
-      let result = "";
-      for (let i = 0; i < text.length; i++) {
-        if (i < revealedCount) {
-          result += text[i];
-        } else if (i === revealedCount && text[i] !== " ") {
-          result += GLITCH_CHARS[Math.floor(Math.random() * GLITCH_CHARS.length)];
-        } else {
-          result += text[i] === " " ? " " : GLITCH_CHARS[Math.floor(Math.random() * GLITCH_CHARS.length)];
-        }
-      }
-      setDisplay(result);
-
-      if (progress < 1) {
-        raf = requestAnimationFrame(tick);
-      } else {
-        setDisplay(text);
-      }
-    };
-
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [text, durationMs, enabled]);
-
-  return display;
+export function useGlitchText(text: string, _durationMs: number = 600, _enabled: boolean = true) {
+  return text;
 }
 
 /**
- * System uptime counter -- counts seconds since mount.
- * Displays in the sidebar status area for that "always running" feel.
+ * @deprecated No-op shim. Remove imports as pages are rewritten.
  */
 export function useUptime() {
-  const [seconds, setSeconds] = useState(0);
-
-  useEffect(() => {
-    const id = setInterval(() => setSeconds((s) => s + 1), 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  const hrs = Math.floor(seconds / 3600);
-  const mins = Math.floor((seconds % 3600) / 60);
-  const secs = seconds % 60;
-
-  return `${String(hrs).padStart(2, "0")}:${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  return "00:00:00";
 }

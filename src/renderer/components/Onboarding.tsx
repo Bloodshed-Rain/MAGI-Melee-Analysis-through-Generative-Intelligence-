@@ -1,13 +1,11 @@
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useGlitchText } from "../hooks";
 import magiLogo from "../assets/magi-logo.png";
 
 /* ═══════════════════════════════════════════════════════════════════
-   ONBOARDING — System initialization sequence
-   A multi-step wizard styled as a subsystem boot process.
-   Left rail: diagnostic log showing boot progress.
-   Right panel: active step content.
+   ONBOARDING — Setup wizard
+   A clean multi-step wizard guiding the user through initial config.
+   Left rail: step indicator. Right panel: active step content.
    ═══════════════════════════════════════════════════════════════════ */
 
 interface OnboardingProps {
@@ -18,17 +16,17 @@ interface OnboardingProps {
 type Step = 0 | 1 | 2 | 3;
 
 const STEP_LABELS: string[] = [
-  "SYS.INIT",
-  "PILOT.ID",
-  "DATA.LINK",
-  "IMPORT.SEQ",
+  "Welcome",
+  "Player",
+  "Replays",
+  "Import",
 ];
 
 const STEP_DESCRIPTIONS: string[] = [
-  "System initialization",
-  "Pilot identification",
-  "Data source link",
-  "Import sequence",
+  "Get started",
+  "Your identity",
+  "Replay folder",
+  "Import games",
 ];
 
 // ── Shared animation config ──────────────────────────────────────
@@ -76,11 +74,11 @@ const styles = {
     maxHeight: "85vh",
     background: "var(--bg-glass-strong)",
     border: "1px solid var(--border)",
-    clipPath: "var(--clip-corner)",
+    borderRadius: 8,
     overflow: "hidden" as const,
   },
 
-  // Left diagnostic rail
+  // Left step rail
   rail: {
     width: 200,
     flexShrink: 0,
@@ -106,21 +104,15 @@ const styles = {
   },
 
   railTitle: {
-    fontFamily: "var(--font-display)",
-    fontSize: 11,
+    fontSize: 14,
     fontWeight: 700,
-    letterSpacing: "0.15em",
     color: "var(--accent)",
-    textTransform: "uppercase" as const,
   },
 
   railSubtitle: {
-    fontFamily: "var(--font-mono)",
-    fontSize: 9,
+    fontSize: 11,
     color: "var(--text-dim)",
-    letterSpacing: "0.08em",
     marginTop: 4,
-    textTransform: "uppercase" as const,
   },
 
   stepList: {
@@ -136,11 +128,9 @@ const styles = {
     alignItems: "center",
     gap: 10,
     padding: "8px 8px",
-    borderRadius: 2,
-    fontFamily: "var(--font-mono)",
-    fontSize: 10,
+    borderRadius: 6,
+    fontSize: 12,
     fontWeight: active ? 600 : 400,
-    letterSpacing: "0.06em",
     color: active
       ? "var(--accent)"
       : done
@@ -153,14 +143,13 @@ const styles = {
         ? "2px solid rgba(var(--accent-rgb), 0.2)"
         : "2px solid transparent",
     transition: "all 0.3s var(--ease-spring)",
-    textTransform: "uppercase" as const,
   }),
 
   stepIndicator: (active: boolean, done: boolean) => ({
-    width: 16,
-    height: 16,
-    borderRadius: 2,
-    border: `1px solid ${active ? "var(--accent)" : done ? "rgba(var(--accent-rgb), 0.3)" : "var(--border)"}`,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    border: `1.5px solid ${active ? "var(--accent)" : done ? "rgba(var(--accent-rgb), 0.3)" : "var(--border)"}`,
     background: done
       ? "rgba(var(--accent-rgb), 0.15)"
       : "transparent",
@@ -168,9 +157,9 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
-    fontSize: 8,
-    color: "var(--accent)",
-    clipPath: "var(--clip-corner-sm)",
+    fontSize: 9,
+    fontWeight: 600,
+    color: active ? "var(--accent)" : done ? "var(--accent)" : "var(--text-dim)",
     transition: "all 0.3s var(--ease-spring)",
   }),
 
@@ -182,10 +171,7 @@ const styles = {
     background: "none",
     border: "none",
     color: "var(--text-dim)",
-    fontFamily: "var(--font-mono)",
-    fontSize: 9,
-    letterSpacing: "0.08em",
-    textTransform: "uppercase" as const,
+    fontSize: 12,
     cursor: "pointer",
     padding: "6px 0",
     transition: "color 0.2s",
@@ -208,27 +194,21 @@ const styles = {
   },
 
   stepTag: {
-    fontFamily: "var(--font-mono)",
-    fontSize: 9,
-    fontWeight: 600,
-    letterSpacing: "0.12em",
+    fontSize: 11,
+    fontWeight: 500,
     color: "var(--text-dim)",
-    textTransform: "uppercase" as const,
     marginBottom: 12,
   },
 
   heading: {
-    fontFamily: "var(--font-display)",
     fontSize: 22,
     fontWeight: 700,
-    letterSpacing: "0.06em",
     color: "var(--text)",
     lineHeight: 1.3,
     marginBottom: 12,
   },
 
   description: {
-    fontFamily: "var(--font-sans)",
     fontSize: 13,
     lineHeight: 1.7,
     color: "var(--text-dim)",
@@ -242,12 +222,9 @@ const styles = {
 
   label: {
     display: "block",
-    fontFamily: "var(--font-mono)",
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: 600,
-    letterSpacing: "0.1em",
-    color: "var(--text-label)",
-    textTransform: "uppercase" as const,
+    color: "var(--text-dim)",
     marginBottom: 8,
   },
 
@@ -255,23 +232,20 @@ const styles = {
     width: "100%",
     maxWidth: 360,
     padding: "11px 16px",
-    borderRadius: 2,
+    borderRadius: 6,
     border: "1px solid var(--border)",
     background: "var(--bg-card)",
     color: "var(--text)",
     fontFamily: "var(--font-mono)",
     fontSize: 13,
-    clipPath: "var(--clip-corner-sm)",
     outline: "none",
     transition: "border-color 0.2s, box-shadow 0.2s",
   },
 
   inputHint: {
-    fontFamily: "var(--font-mono)",
-    fontSize: 10,
+    fontSize: 11,
     color: "var(--text-dim)",
     marginTop: 6,
-    letterSpacing: "0.02em",
   },
 
   folderDisplay: {
@@ -284,13 +258,12 @@ const styles = {
   folderPath: {
     flex: 1,
     padding: "11px 16px",
-    borderRadius: 2,
+    borderRadius: 6,
     border: "1px solid var(--border)",
     background: "var(--bg-card)",
     color: "var(--text)",
     fontFamily: "var(--font-mono)",
     fontSize: 12,
-    clipPath: "var(--clip-corner-sm)",
     overflow: "hidden" as const,
     textOverflow: "ellipsis" as const,
     whiteSpace: "nowrap" as const,
@@ -323,31 +296,27 @@ const styles = {
 
   progressBar: {
     height: "100%",
-    background: "linear-gradient(90deg, var(--accent), var(--secondary))",
+    background: "var(--accent)",
     borderRadius: 2,
     transition: "width 0.4s var(--ease-spring)",
-    boxShadow: "0 0 12px rgba(var(--accent-rgb), 0.4)",
   },
 
   statusText: {
     fontFamily: "var(--font-mono)",
     fontSize: 11,
     color: "var(--text-dim)",
-    letterSpacing: "0.04em",
   },
 
   resultText: {
     fontFamily: "var(--font-mono)",
     fontSize: 12,
     color: "var(--accent)",
-    letterSpacing: "0.02em",
   },
 
   errorText: {
     fontFamily: "var(--font-mono)",
     fontSize: 12,
     color: "var(--red)",
-    letterSpacing: "0.02em",
   },
 
   // Welcome step hero
@@ -363,26 +332,22 @@ const styles = {
     padding: "14px 12px",
     background: "rgba(var(--accent-rgb), 0.04)",
     border: "1px solid rgba(var(--accent-rgb), 0.08)",
-    clipPath: "var(--clip-corner-sm)",
+    borderRadius: 6,
     textAlign: "center" as const,
   },
 
   heroStatLabel: {
-    fontFamily: "var(--font-mono)",
-    fontSize: 8,
-    fontWeight: 600,
-    letterSpacing: "0.1em",
+    fontSize: 10,
+    fontWeight: 500,
     color: "var(--text-dim)",
-    textTransform: "uppercase" as const,
     marginBottom: 4,
   },
 
   heroStatValue: {
-    fontFamily: "var(--font-display)",
+    fontFamily: "var(--font-mono)",
     fontSize: 13,
-    fontWeight: 700,
+    fontWeight: 600,
     color: "var(--accent)",
-    letterSpacing: "0.04em",
   },
 } as const;
 
@@ -390,8 +355,8 @@ const styles = {
 
 function Check() {
   return (
-    <svg width="8" height="8" viewBox="0 0 8 8" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="1.5 4 3.5 6 6.5 2" />
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="2 5 4.5 7.5 8 3" />
     </svg>
   );
 }
@@ -417,8 +382,6 @@ export function Onboarding({ onComplete, onSkip }: OnboardingProps) {
   const [importResult, setImportResult] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [importDone, setImportDone] = useState(false);
-
-  const title = useGlitchText("SYSTEM INITIALIZATION", 700);
 
   // Preload existing config in case user has partial setup
   useEffect(() => {
@@ -520,13 +483,13 @@ export function Onboarding({ onComplete, onSkip }: OnboardingProps) {
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       >
-        {/* ── Diagnostic rail ─────────────────────────────────── */}
+        {/* ── Step rail ───────────────────────────────────────── */}
         <div style={styles.rail}>
           <div>
             <div style={styles.railHeader}>
               <img src={magiLogo} alt="" style={styles.railLogo} />
               <div style={styles.railTitle}>MAGI</div>
-              <div style={styles.railSubtitle}>// Boot sequence</div>
+              <div style={styles.railSubtitle}>Setup</div>
             </div>
 
             <ul style={styles.stepList}>
@@ -542,11 +505,11 @@ export function Onboarding({ onComplete, onSkip }: OnboardingProps) {
                     transition={{ delay: 0.15 + i * 0.06, duration: 0.4 }}
                   >
                     <div style={styles.stepIndicator(active, done)}>
-                      {done ? <Check /> : active ? <span style={{ fontSize: 6 }}>&#9654;</span> : null}
+                      {done ? <Check /> : <span>{i + 1}</span>}
                     </div>
                     <div>
                       <div>{label}</div>
-                      <div style={{ fontSize: 8, fontWeight: 400, color: "var(--text-dim)", letterSpacing: "0.02em", marginTop: 1 }}>
+                      <div style={{ fontSize: 10, fontWeight: 400, color: "var(--text-dim)", marginTop: 1 }}>
                         {STEP_DESCRIPTIONS[i]}
                       </div>
                     </div>
@@ -564,7 +527,7 @@ export function Onboarding({ onComplete, onSkip }: OnboardingProps) {
               onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-dim)"; }}
               type="button"
             >
-              // skip setup &gt;
+              Skip setup
             </button>
           </div>
         </div>
@@ -582,26 +545,26 @@ export function Onboarding({ onComplete, onSkip }: OnboardingProps) {
                 transition={stepTransition}
                 style={styles.panelContent}
               >
-                <div style={styles.stepTag}>Step 01 / 04</div>
-                <h2 style={styles.heading}>{title}</h2>
+                <div style={styles.stepTag}>Step 1 of 4</div>
+                <h2 style={styles.heading}>Welcome to MAGI</h2>
                 <p style={styles.description}>
                   MAGI is your AI-powered coaching system for Super Smash Bros. Melee.
                   Import your Slippi replays, and MAGI will analyze your gameplay,
-                  track your habits, and deliver tactical coaching feedback.
+                  track your habits, and deliver coaching feedback.
                 </p>
 
                 <div style={styles.heroGrid}>
                   <div style={styles.heroStat}>
                     <div style={styles.heroStatLabel}>Analyze</div>
-                    <div style={styles.heroStatValue}>REPLAYS</div>
+                    <div style={styles.heroStatValue}>Replays</div>
                   </div>
                   <div style={styles.heroStat}>
                     <div style={styles.heroStatLabel}>Track</div>
-                    <div style={styles.heroStatValue}>HABITS</div>
+                    <div style={styles.heroStatValue}>Habits</div>
                   </div>
                   <div style={styles.heroStat}>
                     <div style={styles.heroStatLabel}>Receive</div>
-                    <div style={styles.heroStatValue}>COACHING</div>
+                    <div style={styles.heroStatValue}>Coaching</div>
                   </div>
                 </div>
 
@@ -623,8 +586,8 @@ export function Onboarding({ onComplete, onSkip }: OnboardingProps) {
                 transition={stepTransition}
                 style={styles.panelContent}
               >
-                <div style={styles.stepTag}>Step 02 / 04</div>
-                <h2 style={styles.heading}>PILOT IDENTIFICATION</h2>
+                <div style={styles.stepTag}>Step 2 of 4</div>
+                <h2 style={styles.heading}>Player Info</h2>
                 <p style={styles.description}>
                   Enter your Slippi tag or connect code so MAGI can identify you in replays
                   and track your performance across sessions.
@@ -685,7 +648,7 @@ export function Onboarding({ onComplete, onSkip }: OnboardingProps) {
                     Continue
                   </button>
                   {!tag && !connectCode && (
-                    <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-dim)" }}>
+                    <span style={{ fontSize: 11, color: "var(--text-dim)" }}>
                       Enter at least one identifier
                     </span>
                   )}
@@ -703,8 +666,8 @@ export function Onboarding({ onComplete, onSkip }: OnboardingProps) {
                 transition={stepTransition}
                 style={styles.panelContent}
               >
-                <div style={styles.stepTag}>Step 03 / 04</div>
-                <h2 style={styles.heading}>DATA SOURCE LINK</h2>
+                <div style={styles.stepTag}>Step 3 of 4</div>
+                <h2 style={styles.heading}>Replay Folder</h2>
                 <p style={styles.description}>
                   Point MAGI to your Slippi replay folder. This is typically located in
                   your Slippi launcher's output directory.
@@ -758,9 +721,9 @@ export function Onboarding({ onComplete, onSkip }: OnboardingProps) {
                 transition={stepTransition}
                 style={styles.panelContent}
               >
-                <div style={styles.stepTag}>Step 04 / 04</div>
+                <div style={styles.stepTag}>Step 4 of 4</div>
                 <h2 style={styles.heading}>
-                  {importDone ? "SYSTEMS ONLINE" : importing ? "IMPORTING..." : "IMPORT SEQUENCE"}
+                  {importDone ? "All Set" : importing ? "Importing..." : "Import Replays"}
                 </h2>
 
                 <div style={styles.importStatus}>
@@ -794,7 +757,7 @@ export function Onboarding({ onComplete, onSkip }: OnboardingProps) {
                       <p style={styles.resultText}>{importResult}</p>
                       <p style={styles.description}>
                         Your replay data has been loaded. MAGI is ready to provide
-                        tactical analysis and coaching feedback.
+                        analysis and coaching feedback.
                       </p>
                     </>
                   )}
@@ -837,7 +800,7 @@ export function Onboarding({ onComplete, onSkip }: OnboardingProps) {
           </AnimatePresence>
         </div>
 
-        {/* Top-edge gleam -- same visual language as .card::before */}
+        {/* Subtle top edge accent line */}
         <div
           aria-hidden="true"
           style={{

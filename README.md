@@ -41,7 +41,7 @@ Import your `.slp` files, get personalized coaching analysis from an LLM, track 
 
 **Scout your rivals.** The Opponent Rivalry Dossier gives you a deep dive into any opponent: head-to-head record, stage and character breakdowns, and AI-generated matchup analysis.
 
-**No setup required.** Gemini 2.5 Flash free tier is the default LLM — just open the app and start importing replays. No API key needed to get started.
+**No setup required.** Download a release, open the app, import replays, get coached. AI coaching is powered by Gemini 2.5 Flash and works immediately — no API key needed.
 
 ## Features
 
@@ -80,7 +80,7 @@ Import your `.slp` files, get personalized coaching analysis from an LLM, track 
 - **SHA-256 deduplication** — never imports the same file twice
 
 ### Onboarding & UX
-- **Zero-friction onboarding** — Gemini 2.5 Flash free tier is the default LLM, no API key needed
+- **Zero-friction onboarding** — AI coaching works immediately in releases, no API key needed
 - **Onboarding wizard** — 4-step guided setup on first launch
 - **Light/dark mode** — clean toggle in the sidebar
 - **Local-first** — your data stays on your machine, no account needed, no server
@@ -93,25 +93,13 @@ Import your `.slp` files, get personalized coaching analysis from an LLM, track 
 
 ## Getting Started
 
-### Prerequisites
-
-- [Node.js](https://nodejs.org/) 18+
-- Slippi replay files (`.slp`)
-
 ### Install
 
-```bash
-git clone https://github.com/Bloodshed-Rain/TheMAGI.git
-cd TheMAGI
-npm install
-npx electron-rebuild
-```
+Download the latest release for your platform from the [Releases](https://github.com/Bloodshed-Rain/TheMAGI/releases) page:
 
-### Run
-
-```bash
-npm run dev
-```
+- **Windows** — `.exe` installer or portable `.exe`
+- **macOS** — `.dmg`
+- **Linux** — `.AppImage` or `.deb`
 
 ### First-time setup
 
@@ -120,19 +108,18 @@ npm run dev
 3. Browse to your Slippi replay folder
 4. Import your replays and start getting coached
 
-AI coaching works out of the box with Gemini 2.5 Flash (free tier). To use a different provider, go to **Settings** and configure your preferred LLM and API key.
-
-### CLI usage (optional)
-
-```bash
-# Analyze a single replay
-npx tsx src/pipeline-cli.ts path/to/game.slp --target YourTag
-
-# Watch for new replays
-npx tsx src/watcher.ts /path/to/replays --target YourTag
-```
+AI coaching works immediately — no API key needed. To use a different LLM provider, go to **Settings** and configure your preferred model and API key.
 
 ## Development
+
+Building from source requires [Node.js](https://nodejs.org/) 18+.
+
+```bash
+git clone https://github.com/Bloodshed-Rain/TheMAGI.git
+cd TheMAGI
+npm install
+npx electron-rebuild
+```
 
 ```bash
 npm run dev          # Dev mode (Vite + Electron)
@@ -144,6 +131,22 @@ npm run format       # Prettier
 ```
 
 Platform-specific builds: `npm run build:linux`, `build:win`, `build:mac`
+
+> **Note:** A `key.env` file in the project root is required for both `npm run dev` (AI coaching) and `npm run build` (electron-builder will fail without it). Get a free Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey) and create the file:
+> ```
+> GEMINI_API_KEY=your-key-here
+> ```
+> You can also enter the key on the Settings page instead, but `key.env` must still exist for packaging (it can be empty if you only use the Settings page).
+
+### CLI usage (optional)
+
+```bash
+# Analyze a single replay
+npx tsx src/pipeline-cli.ts path/to/game.slp --target YourTag
+
+# Watch for new replays
+npx tsx src/watcher.ts /path/to/replays --target YourTag
+```
 
 ## Architecture
 

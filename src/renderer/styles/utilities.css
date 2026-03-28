@@ -1,0 +1,13 @@
+/* ── Color Utilities ───────────────────────────────────────────── */
+
+.text-win { color: var(--green); }
+.text-loss { color: var(--red); }
+.text-caution { color: var(--yellow); }
+.text-accent { color: var(--accent); }
+.text-muted { color: var(--text-dim); }
+
+/* ── Trend Indicators ─────────────────────────────────────────── */
+
+.trend-up { color: var(--green); }
+.trend-down { color: var(--red); }
+.trend-flat { color: var(--text-dim); }

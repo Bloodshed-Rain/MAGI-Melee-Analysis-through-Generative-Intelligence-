@@ -13,15 +13,15 @@ function RadarTooltip({ active, payload }: any) {
   const { axis, value } = payload[0].payload;
   return (
     <div style={{
-      background: "var(--bg-glass-strong)",
-      backdropFilter: "blur(12px)",
-      border: "1px solid var(--border-glow)",
+      background: "var(--bg-card)",
+      border: "1px solid var(--border)",
+      borderRadius: 6,
       padding: "8px 12px",
       fontSize: 12,
       fontFamily: "var(--font-mono)",
     }}>
       <div style={{ color: "var(--text-dim)", fontSize: 10, marginBottom: 2 }}>{axis}</div>
-      <div style={{ color: "var(--accent)", fontWeight: 800 }}>{Math.round(value)}</div>
+      <div style={{ color: "var(--accent)", fontWeight: 700 }}>{Math.round(value)}</div>
     </div>
   );
 }
@@ -39,16 +39,6 @@ export function PlayerRadar({ stats }: RadarProps) {
   return (
     <ResponsiveContainer width="100%" height={280}>
       <RechartsRadarChart data={data} cx="50%" cy="50%" outerRadius="70%">
-        <defs>
-          <linearGradient id="radarFill" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="var(--plasma-a)" stopOpacity={0.25} />
-            <stop offset="100%" stopColor="var(--plasma-b)" stopOpacity={0.08} />
-          </linearGradient>
-          <linearGradient id="radarStroke" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="var(--plasma-a)" />
-            <stop offset="100%" stopColor="var(--plasma-b)" />
-          </linearGradient>
-        </defs>
         <PolarGrid stroke="var(--border)" strokeDasharray="3 3" />
         <PolarAngleAxis
           dataKey="axis"
@@ -62,11 +52,11 @@ export function PlayerRadar({ stats }: RadarProps) {
         />
         <Radar
           dataKey="value"
-          stroke="url(#radarStroke)"
-          fill="url(#radarFill)"
-          fillOpacity={1}
-          strokeWidth={2.5}
-          dot={{ r: 4, fill: "var(--accent)", strokeWidth: 2, stroke: "var(--bg-card)" } as any}
+          stroke="var(--accent)"
+          fill="var(--accent)"
+          fillOpacity={0.12}
+          strokeWidth={2}
+          dot={{ r: 3.5, fill: "var(--accent)", strokeWidth: 2, stroke: "var(--bg-card)" } as any}
         />
         <Tooltip content={<RadarTooltip />} />
       </RechartsRadarChart>

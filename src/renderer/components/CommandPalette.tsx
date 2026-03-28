@@ -20,7 +20,7 @@ interface CommandPaletteProps {
   onImport: () => void;
 }
 
-// ── Icons (minimal tactical SVGs) ────────────────────────────────────
+// ── Icons ────────────────────────────────────────────────────────────
 
 function NavIcon() {
   return (
@@ -93,9 +93,9 @@ function fuzzyMatch(query: string, target: string): { match: boolean; score: num
 // ── Category labels ──────────────────────────────────────────────────
 
 const CATEGORY_LABELS: Record<string, string> = {
-  navigate: "NAVIGATE",
-  action: "ACTIONS",
-  opponent: "OPPONENTS",
+  navigate: "Navigate",
+  action: "Actions",
+  opponent: "Opponents",
 };
 
 // ── Component ────────────────────────────────────────────────────────
@@ -334,9 +334,9 @@ export function CommandPalette({ navigateTo, onToggleTheme, onImport }: CommandP
         >
           <motion.div
             className="cmd-panel"
-            initial={{ opacity: 0, scale: 0.95, y: -20 }}
+            initial={{ opacity: 0, scale: 0.97, y: -16 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.97, y: -10 }}
+            exit={{ opacity: 0, scale: 0.98, y: -8 }}
             transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
             onClick={(e) => e.stopPropagation()}
             onKeyDown={handleKeyDown}
@@ -371,10 +371,10 @@ export function CommandPalette({ navigateTo, onToggleTheme, onImport }: CommandP
                   {opponentSearchPending ? (
                     <>
                       <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2, marginRight: 8 }} />
-                      SCANNING DATABASE...
+                      Searching...
                     </>
                   ) : (
-                    "NO MATCHES FOUND"
+                    "No matches found"
                   )}
                 </div>
               )}
@@ -382,8 +382,7 @@ export function CommandPalette({ navigateTo, onToggleTheme, onImport }: CommandP
               {groupedItems.map((group) => (
                 <div key={group.category} className="cmd-group">
                   <div className="cmd-group-label">
-                    <span className="cmd-group-dot" />
-                    {CATEGORY_LABELS[group.category] ?? group.category.toUpperCase()}
+                    {CATEGORY_LABELS[group.category] ?? group.category}
                   </div>
                   {group.items.map((item) => {
                     const thisIndex = flatIndex++;
