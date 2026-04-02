@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Markdown, { type Components } from "react-markdown";
 import { Onboarding } from "../components/Onboarding";
@@ -6,6 +6,21 @@ import { StockTimeline } from "../components/StockTimeline";
 import { Tooltip } from "../components/Tooltip";
 import { useRecentGames, useConfig } from "../hooks/queries";
 import { formatGameDate } from "../hooks";
+
+/** Returns a CSS color variable based on thresholds: good (green), ok (yellow), bad (red) */
+function statColor(value: number, goodAbove: number, okAbove?: number): string {
+  if (value > goodAbove) return "var(--green)";
+  if (okAbove !== undefined && value > okAbove) return "var(--yellow)";
+  return "var(--red)";
+}
+
+/** Same as statColor but lower is better (e.g. openings per kill) */
+function statColorInverse(value: number, goodBelow: number, okBelow: number): string {
+  if (!Number.isFinite(value)) return "var(--text-muted)";
+  if (value <= goodBelow) return "var(--green)";
+  if (value <= okBelow) return "var(--yellow)";
+  return "var(--red)";
+}
 
 const FPS = 60;
 const FIRST_PLAYABLE = -123; // Frames.FIRST_PLAYABLE from slippi-js
@@ -119,10 +134,11 @@ function SessionPulse({ games }: { games: RecentGame[] }) {
   const avgNeutral = games.reduce((s, g) => s + g.neutralWinRate, 0) / games.length;
   const avgLCancel = games.reduce((s, g) => s + g.lCancelRate, 0) / games.length;
 
+  const recordColor = wins > losses ? "var(--green)" : wins < losses ? "var(--red)" : "var(--text)";
   const stats = [
-    { label: "Record", value: `${wins}W-${losses}L`, color: wins > losses ? "var(--green)" : wins < losses ? "var(--red)" : "var(--text)", tip: "Wins vs losses in your recent session" },
-    { label: "Neutral WR", value: `${(avgNeutral * 100).toFixed(1)}%`, color: avgNeutral > 0.5 ? "var(--green)" : "var(--yellow)", tip: "How often you win the neutral game — first hit in an exchange. Above 50% means you're winning more openers than your opponent." },
-    { label: "L-Cancel", value: `${(avgLCancel * 100).toFixed(1)}%`, color: avgLCancel > 0.85 ? "var(--green)" : "var(--yellow)", tip: "Percentage of aerial landings where you successfully L-cancelled. 85%+ is good, 95%+ is top-level." },
+    { label: "Record", value: `${wins}W-${losses}L`, color: recordColor, tip: "Wins vs losses in your recent session" },
+    { label: "Neutral WR", value: `${(avgNeutral * 100).toFixed(1)}%`, color: statColor(avgNeutral, 0.5), tip: "How often you win the neutral game — first hit in an exchange. Above 50% means you're winning more openers than your opponent." },
+    { label: "L-Cancel", value: `${(avgLCancel * 100).toFixed(1)}%`, color: statColor(avgLCancel, 0.85), tip: "Percentage of aerial landings where you successfully L-cancelled. 85%+ is good, 95%+ is top-level." },
     { label: "Games", value: `${games.length}`, color: "var(--text)", tip: "Total games in this recent session" },
   ];
 
@@ -131,6 +147,32 @@ function SessionPulse({ games }: { games: RecentGame[] }) {
       {stats.map((s, i) => (
         <PulseStat key={s.label} value={s.value} label={s.label} color={s.color} index={i} tip={s.tip} />
       ))}
+    </div>
+  );
+}
+
+const TIMESTAMP_PATTERN = /\[\d{1,2}:\d{2}\]/;
+
+/** Renders analysis markdown with memoized timestamp components to avoid full re-parse on every render */
+function GameAnalysisText({ replayPath, text, isStreaming, showTimestampHint }: {
+  replayPath: string;
+  text: string;
+  isStreaming?: boolean;
+  showTimestampHint?: boolean;
+}) {
+  const components = useMemo(() => makeTimestampComponents(replayPath), [replayPath]);
+  const processed = useMemo(() => injectTimestampLinks(text), [text]);
+  const hasTimestamps = showTimestampHint && TIMESTAMP_PATTERN.test(text);
+
+  return (
+    <div className="analysis-text">
+      <Markdown components={components}>{processed}</Markdown>
+      {isStreaming && <span className="streaming-cursor" />}
+      {hasTimestamps && (
+        <p className="timestamp-hint">
+          Timestamps open the replay in Dolphin — it'll fast-forward to the moment, so give it a sec.
+        </p>
+      )}
     </div>
   );
 }
@@ -262,7 +304,7 @@ export function Dashboard({ refreshKey }: { refreshKey: number }) {
   if (loading) {
     return (
       <div className="loading">
-        <div className="spinner" style={{ margin: "0 auto 16px" }} />
+        <div className="spinner loading-spinner" />
         Loading...
       </div>
     );
@@ -284,7 +326,7 @@ export function Dashboard({ refreshKey }: { refreshKey: number }) {
     return (
       <div className="empty-state">
         <div className="empty-state-icon">
-          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.4, color: "var(--accent)" }}>
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
             <line x1="9" y1="8" x2="17" y2="8" />
             <line x1="9" y1="12" x2="14" y2="12" />
@@ -316,80 +358,55 @@ export function Dashboard({ refreshKey }: { refreshKey: number }) {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1, duration: 0.5 }}
-        style={{ marginBottom: 32 }}
+        className="discovery-section"
       >
-        <div className="card" style={{ 
-          background: 'linear-gradient(135deg, rgba(var(--accent-rgb), 0.08) 0%, rgba(var(--accent-rgb), 0.02) 100%)',
-          border: '1px solid rgba(var(--accent-rgb), 0.2)',
-          position: 'relative',
-          overflow: 'hidden'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div style={{ display: 'flex', gap: '16px' }}>
-              <div style={{ 
-                width: '42px', 
-                height: '42px', 
-                borderRadius: '10px', 
-                background: 'rgba(var(--accent-rgb), 0.1)', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                color: 'var(--accent)',
-                boxShadow: '0 0 20px rgba(var(--accent-rgb), 0.2)'
-              }}>
+        <div className="card discovery-card">
+          <div className="discovery-header">
+            <div className="discovery-title-row">
+              <div className="discovery-icon">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 2a10 10 0 1 0 10 10H12V2z"/><path d="M12 12L2.1 12.1"/><path d="M12 12L19 19"/><path d="M12 12V22"/>
                 </svg>
               </div>
               <div>
-                <h2 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--accent)', marginBottom: '4px' }}>Deep Discovery</h2>
-                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', maxWidth: '400px' }}>
+                <h2 className="discovery-heading">Deep Discovery</h2>
+                <p className="discovery-desc">
                   MAGI is mining your entire career for hidden mathematical truths and non-obvious win conditions.
                 </p>
               </div>
             </div>
             {!discovery && !isDiscovering && (
-              <button 
-                className="btn btn-primary" 
-                onClick={handleRunDiscovery}
-                style={{ 
-                  padding: '10px 20px', 
-                  fontSize: '13px', 
-                  fontWeight: 700,
-                  boxShadow: '0 0 15px rgba(var(--accent-rgb), 0.3)'
-                }}
-              >
+              <button className="btn btn-primary discovery-btn" onClick={handleRunDiscovery}>
                 Synthesize Career Narrative
               </button>
             )}
           </div>
 
           {discoveryError && (
-            <div style={{ marginTop: '16px', padding: '12px 16px', background: 'rgba(255,60,60,0.08)', border: '1px solid var(--red)', borderRadius: '6px', color: 'var(--red)', fontSize: '13px', fontFamily: 'var(--font-mono)' }}>
+            <div className="discovery-error">
               {discoveryError}
             </div>
           )}
 
           {(isDiscovering || discovery || discoveryStream) && (
-            <div style={{ marginTop: '24px', padding: '20px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', border: '1px solid rgba(var(--accent-rgb), 0.1)' }}>
+            <div className="discovery-body">
               {isDiscovering && !discoveryStream && (
                 <div className="analyze-loading">
                   <div className="spinner" />
                   <span>Running correlation matrix and situational anomaly filters...</span>
                 </div>
               )}
-              <div className="analysis-text" style={{ fontSize: '14px', lineHeight: '1.6' }}>
+              <div className="analysis-text discovery-analysis-text">
                 <Markdown>{discovery || discoveryStream}</Markdown>
                 {isDiscovering && <span className="streaming-cursor" />}
               </div>
               {discovery && !isDiscovering && (
-                <button className="btn" style={{ marginTop: 16 }} onClick={handleRunDiscovery}>Refresh Discovery</button>
+                <button className="btn discovery-refresh-btn" onClick={handleRunDiscovery}>Refresh Discovery</button>
               )}
             </div>
           )}
           
-          {/* Decorative elements */}
-          <div style={{ position: 'absolute', top: '-20px', right: '-20px', opacity: 0.05, pointerEvents: 'none' }}>
+          <div className="discovery-decor">
             <svg width="120" height="120" viewBox="0 0 24 24" fill="var(--accent)">
               <path d="M12 2a10 10 0 1 0 10 10H12V2z"/>
             </svg>
@@ -434,9 +451,7 @@ export function Dashboard({ refreshKey }: { refreshKey: number }) {
                   </div>
                   <div className="game-card-stats">
                     <div className="mini-stat">
-                      <span className="mini-stat-value" style={{
-                        color: game.neutralWinRate > 0.5 ? "var(--green)" : "var(--red)",
-                      }}>
+                      <span className="mini-stat-value" style={{ color: statColor(game.neutralWinRate, 0.5) }}>
                         {(game.neutralWinRate * 100).toFixed(0)}%
                       </span>
                       <Tooltip text="Neutral win rate — how often you won the first hit in an exchange" position="top">
@@ -444,9 +459,7 @@ export function Dashboard({ refreshKey }: { refreshKey: number }) {
                       </Tooltip>
                     </div>
                     <div className="mini-stat">
-                      <span className="mini-stat-value" style={{
-                        color: Number.isFinite(game.openingsPerKill) && game.openingsPerKill <= 4 ? "var(--green)" : game.openingsPerKill <= 7 ? "var(--yellow)" : "var(--red)",
-                      }}>
+                      <span className="mini-stat-value" style={{ color: statColorInverse(game.openingsPerKill, 4, 7) }}>
                         {Number.isFinite(game.openingsPerKill) ? game.openingsPerKill.toFixed(1) : "\u2014"}
                       </span>
                       <Tooltip text="Openings per kill — how many neutral wins it takes to get a stock. Lower is better (fewer openings needed)." position="top">
@@ -454,9 +467,7 @@ export function Dashboard({ refreshKey }: { refreshKey: number }) {
                       </Tooltip>
                     </div>
                     <div className="mini-stat">
-                      <span className="mini-stat-value" style={{
-                        color: game.lCancelRate > 0.85 ? "var(--green)" : game.lCancelRate > 0.7 ? "var(--yellow)" : "var(--red)",
-                      }}>
+                      <span className="mini-stat-value" style={{ color: statColor(game.lCancelRate, 0.85, 0.7) }}>
                         {(game.lCancelRate * 100).toFixed(0)}%
                       </span>
                       <Tooltip text="L-cancel success rate — percentage of aerials landing with a successful L-cancel input" position="top">
@@ -464,9 +475,7 @@ export function Dashboard({ refreshKey }: { refreshKey: number }) {
                       </Tooltip>
                     </div>
                     <div className="mini-stat">
-                      <span className="mini-stat-value" style={{
-                        color: game.edgeguardSuccessRate > 0.6 ? "var(--green)" : game.edgeguardSuccessRate > 0.3 ? "var(--yellow)" : "var(--red)",
-                      }}>
+                      <span className="mini-stat-value" style={{ color: statColor(game.edgeguardSuccessRate, 0.6, 0.3) }}>
                         {(game.edgeguardSuccessRate * 100).toFixed(0)}%
                       </span>
                       <Tooltip text="Edgeguard success rate — how often your offstage attempts result in a stock taken" position="top">
@@ -476,9 +485,9 @@ export function Dashboard({ refreshKey }: { refreshKey: number }) {
                   </div>
                   <div className="game-card-chevron">
                     <motion.span
+                      className="game-card-chevron-icon"
                       animate={{ rotate: isExpanded ? 180 : 0 }}
                       transition={{ duration: 0.25 }}
-                      style={{ display: "inline-block" }}
                     >
                       {"\u25BC"}
                     </motion.span>
@@ -494,12 +503,11 @@ export function Dashboard({ refreshKey }: { refreshKey: number }) {
                       exit={{ opacity: 0, height: 0 }}
                       transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
                     >
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                      <div className="game-card-controls">
                         <button
-                          className="btn"
+                          className="btn game-card-watch-btn"
                           onClick={(e) => handleWatchReplay(e, game)}
                           disabled={launchingDolphin === game.id}
-                          style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}
                         >
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <polygon points="5 3 19 12 5 21 5 3" />
@@ -507,7 +515,7 @@ export function Dashboard({ refreshKey }: { refreshKey: number }) {
                           {launchingDolphin === game.id ? "Launching..." : "Watch Replay"}
                         </button>
                         {dolphinError && expandedGame === game.id && (
-                          <span style={{ color: "var(--red)", fontSize: 12, fontFamily: "var(--font-mono)" }}>{dolphinError}</span>
+                          <span className="game-card-error">{dolphinError}</span>
                         )}
                       </div>
                       <StockTimeline
@@ -522,29 +530,13 @@ export function Dashboard({ refreshKey }: { refreshKey: number }) {
                         </div>
                       )}
                       {analyzingGame === game.id && (isStreaming || streamingText) && !cached && (
-                        <div className="analysis-text">
-                          <Markdown components={makeTimestampComponents(game.replayPath)}>
-                            {injectTimestampLinks(streamingText)}
-                          </Markdown>
-                          {isStreaming && (
-                            <span className="streaming-cursor" />
-                          )}
-                        </div>
+                        <GameAnalysisText replayPath={game.replayPath} text={streamingText} isStreaming={isStreaming} />
                       )}
                       {analyzeError && expandedGame === game.id && !cached && !streamingText && (
-                        <p style={{ color: "var(--red)", fontSize: 13, fontFamily: "var(--font-mono)" }}>{analyzeError}</p>
+                        <p className="game-card-error">{analyzeError}</p>
                       )}
                       {cached && (
-                        <div className="analysis-text">
-                          <Markdown components={makeTimestampComponents(game.replayPath)}>
-                            {injectTimestampLinks(cached)}
-                          </Markdown>
-                          {cached.includes("[") && (
-                            <p style={{ fontSize: 10, color: "var(--text-muted)", fontStyle: "italic", marginTop: 12, fontFamily: "var(--font-mono)" }}>
-                              Timestamps open the replay in Dolphin — it'll fast-forward to the moment, so give it a sec.
-                            </p>
-                          )}
-                        </div>
+                        <GameAnalysisText replayPath={game.replayPath} text={cached} showTimestampHint />
                       )}
                     </motion.div>
                   )}

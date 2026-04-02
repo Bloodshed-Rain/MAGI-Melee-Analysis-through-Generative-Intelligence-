@@ -453,6 +453,93 @@
   font-family: var(--font-mono);
 }
 .empty-state-icon { margin-bottom: 16px; opacity: 0.4; }
+
+/* ── Discovery Card ──────────────────────────────────────────────── */
+.discovery-card {
+  background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.08) 0%, rgba(var(--accent-rgb), 0.02) 100%);
+  border: 1px solid rgba(var(--accent-rgb), 0.2);
+  position: relative;
+  overflow: hidden;
+}
+.discovery-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.discovery-title-row { display: flex; gap: 16px; }
+.discovery-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: rgba(var(--accent-rgb), 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.2);
+  flex-shrink: 0;
+}
+.discovery-heading {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--accent);
+  margin: 0 0 4px;
+}
+.discovery-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  max-width: 400px;
+  margin: 0;
+}
+.discovery-btn {
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 0 15px rgba(var(--accent-rgb), 0.3);
+  flex-shrink: 0;
+}
+.discovery-error {
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: rgba(255, 60, 60, 0.08);
+  border: 1px solid var(--red);
+  border-radius: 6px;
+  color: var(--red);
+  font-size: 13px;
+  font-family: var(--font-mono);
+}
+.discovery-body {
+  margin-top: 24px;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  border: 1px solid rgba(var(--accent-rgb), 0.1);
+}
+.discovery-section { margin-bottom: 32px; }
+.discovery-analysis-text { font-size: 14px; line-height: 1.6; }
+.discovery-refresh-btn { margin-top: 16px; }
+.discovery-decor {
+  position: absolute;
+  top: -20px;
+  right: -20px;
+  opacity: 0.05;
+  pointer-events: none;
+}
+
+/* ── Game Card Controls ──────────────────────────────────────────── */
+.game-card-controls { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.game-card-watch-btn { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.game-card-error { color: var(--red); font-size: 12px; font-family: var(--font-mono); }
+.game-card-chevron-icon { display: inline-block; }
+.timestamp-hint {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-top: 12px;
+  font-family: var(--font-mono);
+}
+.loading-spinner { margin: 0 auto 16px; }
+
 .loading {
   color: var(--text-muted);
   padding: 48px;
