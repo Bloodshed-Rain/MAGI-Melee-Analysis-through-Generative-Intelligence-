@@ -47,7 +47,7 @@ function makeTimestampComponents(replayPath: string): Components {
           <button
             onClick={handleClick}
             className="timestamp-link"
-            title={`Jump to ${ts} in replay`}
+            title={`Open replay at ${ts} — Dolphin will fast-forward to this point, hang tight`}
           >
             ▶ {ts}
           </button>
@@ -539,6 +539,11 @@ export function Dashboard({ refreshKey }: { refreshKey: number }) {
                           <Markdown components={makeTimestampComponents(game.replayPath)}>
                             {injectTimestampLinks(cached)}
                           </Markdown>
+                          {cached.includes("[") && (
+                            <p style={{ fontSize: 10, color: "var(--text-muted)", fontStyle: "italic", marginTop: 12, fontFamily: "var(--font-mono)" }}>
+                              Timestamps open the replay in Dolphin — it'll fast-forward to the moment, so give it a sec.
+                            </p>
+                          )}
                         </div>
                       )}
                     </motion.div>
