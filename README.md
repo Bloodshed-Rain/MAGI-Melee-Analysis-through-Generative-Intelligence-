@@ -4,6 +4,8 @@ AI-powered Melee coaching from your Slippi replays.
 
 Import your `.slp` files, get personalized coaching analysis from an LLM, track your stats over time, and spot trends across sessions. No other tool in the Melee ecosystem does this.
 
+![MAGI Dashboard](screenshots/dashboard.png)
+
 ---
 
 ## What it does
@@ -25,6 +27,9 @@ Import your `.slp` files, get personalized coaching analysis from an LLM, track 
 ## Features
 
 ### AI Coaching
+
+![MAGI Coaching — matchup analysis](screenshots/coaching-matchup.png)
+
 - **Multi-scope analysis** — coaching for games, sets, characters, stages, opponents, or your full career
 - **Deep Discovery** — full pairwise correlation matrix (21 metrics, top 25 by strength) with AI pattern mining for hidden insights and win conditions
 - **Streaming AI coaching** — real-time text generation with blinking cursor, no waiting for a full response
@@ -36,7 +41,12 @@ Import your `.slp` files, get personalized coaching analysis from an LLM, track 
 - **Queue management** — LLM calls processed sequentially with queue position feedback, 429 rate-limit handling, and exponential backoff
 - **MAGI trend commentary** — AI personality that reacts to your trajectory with blunt, witty feedback
 
+![MAGI Coaching — full career analysis](screenshots/coaching-career.png)
+
 ### Stats & Tracking
+
+![Player Profile — record, radar chart, mixup analysis](screenshots/profile.png)
+
 - **Per-game stats** — neutral win rate, L-cancel rate, openings per kill, damage per opening, conversion rate, recovery success, death percent, and more
 - **26-character signature stats** — character-specific tech tracking (Fox waveshines, Falco pillars, Marth Ken combos, Sheik tech chases, Falcon knees, Puff rests, Peach turnips, and more)
 - **Shield pressure tracking** — shield damage, shield breaks, and shield poke rate
@@ -45,13 +55,21 @@ Import your `.slp` files, get personalized coaching analysis from an LLM, track 
 - **Habit entropy analysis** — detects predictable patterns in recovery, ledge, tech roll, shield drop, and neutral DI options
 
 ### Visualization & Navigation
+
+![Trend charts — rolling averages over time](screenshots/trends.png)
+
 - **Stock timeline** — per-stock strip chart showing duration, damage dealt/taken, kill moves, and momentum shifts
 - **Trend charts** — 5-game rolling averages for 9 tracked metrics with area charts and change indicators
 - **Command palette** — Cmd/Ctrl+K for quick navigation, fuzzy search, opponent lookup, and actions
 - **Character pages** — per-character stats, radar charts, signature stats, matchup and stage records with character card art
+
+![Character page — Marth](screenshots/characters.png)
 - **31 themes** — 5 base themes (dark, light, CRT, tournament, amber) + 26 character-themed skins
 
 ### Opponents & Matchups
+
+![Sessions — game history with results and stats](screenshots/sessions.png)
+
 - **Opponent Rivalry Dossier** — deep dive into any opponent with record, stage/character breakdowns, and AI matchup analysis
 - **Matchup & stage records** — win rate bars for every character and stage you've played
 - **Set detection** — auto-groups games against the same opponent within 15 minutes
@@ -65,6 +83,9 @@ Import your `.slp` files, get personalized coaching analysis from an LLM, track 
 - **SHA-256 deduplication** — never imports the same file twice
 
 ### Onboarding & UX
+
+![Settings — 31 themes including character skins](screenshots/settings-themes.png)
+
 - **Zero-friction onboarding** — AI coaching works immediately in releases, no API key needed
 - **Onboarding wizard** — 5-step guided setup (welcome, identity, replay folder, import, theme selection)
 - **Local-first** — your data stays on your machine, no account needed, no server

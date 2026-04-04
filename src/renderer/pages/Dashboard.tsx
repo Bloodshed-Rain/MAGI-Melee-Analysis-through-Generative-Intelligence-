@@ -4,7 +4,7 @@ import Markdown, { type Components } from "react-markdown";
 import { Onboarding } from "../components/Onboarding";
 import { StockTimeline } from "../components/StockTimeline";
 import { Tooltip } from "../components/Tooltip";
-import { useRecentGames, useConfig } from "../hooks/queries";
+import { useRecentGames, useConfig, useOverallRecord } from "../hooks/queries";
 import { formatGameDate } from "../hooks";
 
 /** Returns a CSS color variable based on thresholds: good (green), ok (yellow), bad (red) */
@@ -126,20 +126,20 @@ function PulseStat({ value, label, color, index, tip }: {
 }
 
 // Quick-glance stats from the last session
-function SessionPulse({ games }: { games: RecentGame[] }) {
+function SessionPulse({ games, record }: { games: RecentGame[]; record?: { wins: number; losses: number; totalGames: number } }) {
   if (games.length === 0) return null;
 
-  const wins = games.filter((g) => g.result === "win").length;
-  const losses = games.length - wins;
+  const wins = record?.wins ?? games.filter((g) => g.result === "win").length;
+  const losses = record?.losses ?? games.length - wins;
   const avgNeutral = games.reduce((s, g) => s + g.neutralWinRate, 0) / games.length;
   const avgLCancel = games.reduce((s, g) => s + g.lCancelRate, 0) / games.length;
 
   const recordColor = wins > losses ? "var(--green)" : wins < losses ? "var(--red)" : "var(--text)";
   const stats = [
-    { label: "Record", value: `${wins}W-${losses}L`, color: recordColor, tip: "Wins vs losses in your recent session" },
+    { label: "Record", value: `${wins}W-${losses}L`, color: recordColor, tip: "Overall win/loss record across all games" },
     { label: "Neutral WR", value: `${(avgNeutral * 100).toFixed(1)}%`, color: statColor(avgNeutral, 0.5), tip: "How often you win the neutral game — first hit in an exchange. Above 50% means you're winning more openers than your opponent." },
     { label: "L-Cancel", value: `${(avgLCancel * 100).toFixed(1)}%`, color: statColor(avgLCancel, 0.85), tip: "Percentage of aerial landings where you successfully L-cancelled. 85%+ is good, 95%+ is top-level." },
-    { label: "Games", value: `${games.length}`, color: "var(--text)", tip: "Total games in this recent session" },
+    { label: "Games", value: `${record?.totalGames ?? games.length}`, color: "var(--text)", tip: "Total games played" },
   ];
 
   return (
@@ -179,6 +179,7 @@ function GameAnalysisText({ replayPath, text, isStreaming, showTimestampHint }: 
 
 export function Dashboard({ refreshKey }: { refreshKey: number }) {
   const { data: games = [], isLoading: loading, refetch } = useRecentGames(20);
+  const { data: record, refetch: refetchRecord } = useOverallRecord();
   const { data: config } = useConfig();
   const [onboardingDismissed, setOnboardingDismissed] = useState(false);
 
@@ -214,7 +215,8 @@ export function Dashboard({ refreshKey }: { refreshKey: number }) {
 
   useEffect(() => {
     refetch();
-  }, [refreshKey, refetch]);
+    refetchRecord();
+  }, [refreshKey, refetch, refetchRecord]);
 
   const handleGameClick = async (game: RecentGame) => {
     if (expandedGame === game.id) {
@@ -351,7 +353,7 @@ export function Dashboard({ refreshKey }: { refreshKey: number }) {
         </div>
       </motion.div>
 
-      <SessionPulse games={games} />
+      <SessionPulse games={games} record={record} />
 
       {/* MAGI Discovery (The Oracle) */}
       <motion.div
@@ -364,8 +366,8 @@ export function Dashboard({ refreshKey }: { refreshKey: number }) {
           <div className="discovery-header">
             <div className="discovery-title-row">
               <div className="discovery-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 2a10 10 0 1 0 10 10H12V2z"/><path d="M12 12L2.1 12.1"/><path d="M12 12L19 19"/><path d="M12 12V22"/>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" fill="rgba(var(--accent-rgb), 0.15)" stroke="currentColor"/>
                 </svg>
               </div>
               <div>
@@ -406,11 +408,7 @@ export function Dashboard({ refreshKey }: { refreshKey: number }) {
             </div>
           )}
           
-          <div className="discovery-decor">
-            <svg width="120" height="120" viewBox="0 0 24 24" fill="var(--accent)">
-              <path d="M12 2a10 10 0 1 0 10 10H12V2z"/>
-            </svg>
-          </div>
+          <div className="discovery-watermark">MAGI</div>
         </div>
       </motion.div>
 
