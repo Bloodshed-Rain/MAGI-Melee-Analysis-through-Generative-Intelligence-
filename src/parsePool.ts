@@ -13,11 +13,15 @@ import path from "path";
 import os from "os";
 import type { GameResult } from "./pipeline";
 
+/** Timeout per parse job — prevents corrupt replays from hanging indefinitely */
+const JOB_TIMEOUT_MS = 60_000;
+
 interface ParseJob {
   filePath: string;
   gameNumber: number;
   resolve: (result: GameResult) => void;
   reject: (error: Error) => void;
+  timer?: ReturnType<typeof setTimeout>;
 }
 
 interface WorkerOutput {
@@ -46,7 +50,29 @@ export class ParsePool {
    */
   parse(filePath: string, gameNumber: number = 1): Promise<GameResult> {
     return new Promise((resolve, reject) => {
-      this.queue.push({ filePath, gameNumber, resolve, reject });
+      const job: ParseJob = {
+        filePath,
+        gameNumber,
+        resolve: (result) => { clearTimeout(job.timer); resolve(result); },
+        reject: (err) => { clearTimeout(job.timer); reject(err); },
+      };
+      job.timer = setTimeout(() => {
+        // Remove from queue if still pending
+        const queueIdx = this.queue.indexOf(job);
+        if (queueIdx >= 0) {
+          this.queue.splice(queueIdx, 1);
+        }
+        // Kill the worker if actively running this job
+        for (const [worker, activeJob] of this.activeJobs) {
+          if (activeJob === job) {
+            this.activeJobs.delete(worker);
+            worker.terminate();
+            break;
+          }
+        }
+        reject(new Error(`Parse timeout after ${JOB_TIMEOUT_MS / 1000}s: ${filePath}`));
+      }, JOB_TIMEOUT_MS);
+      this.queue.push(job);
       this.dispatch();
     });
   }
@@ -85,6 +111,7 @@ export class ParsePool {
     for (const job of this.queue) {
       job.reject(new Error("Pool terminated"));
     }
+    this.queue.forEach((job) => clearTimeout(job.timer));
     this.queue = [];
   }
 

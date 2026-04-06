@@ -1,4 +1,6 @@
+import { Notification } from "electron";
 import { watchReplays } from "../../watcher.js";
+import { getGameHighlights } from "../../db.js";
 import { getMainWindow, getFileWatcher, setFileWatcher } from "../state.js";
 import { type SafeHandleFn, validatePath } from "../ipc.js";
 
@@ -15,6 +17,23 @@ export function registerWatcherHandlers(safeHandle: SafeHandleFn): void {
       importExisting: false,
       onImport: (result) => {
         getMainWindow()?.webContents.send("watcher:imported", result);
+
+        // Fire desktop notification if the game has highlights
+        if (result.gameId && !result.skipped) {
+          try {
+            const highlights = getGameHighlights(result.gameId);
+            if (highlights.length > 0) {
+              const labels = highlights.map((h) => h.label);
+              const unique = [...new Set(labels)];
+              new Notification({
+                title: "MAGI — Game Highlights",
+                body: unique.join(", "),
+              }).show();
+            }
+          } catch {
+            // Non-critical — don't break the import flow
+          }
+        }
       },
       onError: (err) => {
         getMainWindow()?.webContents.send("watcher:error", err.message);

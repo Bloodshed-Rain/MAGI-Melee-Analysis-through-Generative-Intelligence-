@@ -129,6 +129,27 @@ const SCHEMA = `
     game_id INTEGER PRIMARY KEY REFERENCES games(id),
     signature_json TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS highlights (
+    id INTEGER PRIMARY KEY,
+    game_id INTEGER NOT NULL REFERENCES games(id),
+    type TEXT NOT NULL,
+    label TEXT NOT NULL,
+    description TEXT NOT NULL,
+    character TEXT NOT NULL,
+    victim TEXT NOT NULL,
+    start_frame INTEGER NOT NULL,
+    timestamp TEXT NOT NULL,
+    damage INTEGER NOT NULL DEFAULT 0,
+    start_percent INTEGER NOT NULL DEFAULT 0,
+    did_kill INTEGER NOT NULL DEFAULT 0,
+    moves_json TEXT NOT NULL DEFAULT '[]',
+    stock_number INTEGER,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_highlights_game_id ON highlights(game_id);
+  CREATE INDEX IF NOT EXISTS idx_highlights_type ON highlights(type);
 `;
 
 // ── Migration system ─────────────────────────────────────────────────
@@ -180,6 +201,48 @@ const migrations: Migration[] = [
         db.exec("ALTER TABLE game_stats ADD COLUMN di_combo_score REAL NOT NULL DEFAULT 0.5");
         db.exec("ALTER TABLE game_stats ADD COLUMN di_avg_combo_length_received REAL NOT NULL DEFAULT 0");
         db.exec("ALTER TABLE game_stats ADD COLUMN di_avg_combo_length_dealt REAL NOT NULL DEFAULT 0");
+      }
+    },
+  },
+  {
+    version: 4,
+    description: "Add scope, scope_identifier, title columns to coaching_analyses",
+    up: (db) => {
+      const columns = db.pragma("table_info(coaching_analyses)") as { name: string }[];
+      if (!columns.some(c => c.name === "scope")) {
+        db.exec("ALTER TABLE coaching_analyses ADD COLUMN scope TEXT NOT NULL DEFAULT 'game'");
+        db.exec("ALTER TABLE coaching_analyses ADD COLUMN scope_identifier TEXT");
+        db.exec("ALTER TABLE coaching_analyses ADD COLUMN title TEXT");
+      }
+    },
+  },
+  {
+    version: 5,
+    description: "Add highlights table for game highlight detection",
+    up: (db) => {
+      const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='highlights'").get();
+      if (!tables) {
+        db.exec(`
+          CREATE TABLE highlights (
+            id INTEGER PRIMARY KEY,
+            game_id INTEGER NOT NULL REFERENCES games(id),
+            type TEXT NOT NULL,
+            label TEXT NOT NULL,
+            description TEXT NOT NULL,
+            character TEXT NOT NULL,
+            victim TEXT NOT NULL,
+            start_frame INTEGER NOT NULL,
+            timestamp TEXT NOT NULL,
+            damage INTEGER NOT NULL DEFAULT 0,
+            start_percent INTEGER NOT NULL DEFAULT 0,
+            did_kill INTEGER NOT NULL DEFAULT 0,
+            moves_json TEXT NOT NULL DEFAULT '[]',
+            stock_number INTEGER,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+          );
+          CREATE INDEX idx_highlights_game_id ON highlights(game_id);
+          CREATE INDEX idx_highlights_type ON highlights(type);
+        `);
       }
     },
   },
@@ -265,6 +328,7 @@ export function getDb(): Database.Database {
     try {
       db = new Database(DB_PATH);
       db.pragma("journal_mode = WAL");
+      db.pragma("busy_timeout = 5000");
       db.pragma("foreign_keys = ON");
       db.exec(SCHEMA);
       runMigrations(db);
@@ -467,13 +531,64 @@ export function insertCoachingAnalysis(
   sessionId: number | null,
   modelUsed: string,
   analysisText: string,
+  scope?: string,
+  scopeIdentifier?: string,
+  title?: string,
 ): number {
   const stmt = getDb().prepare(`
-    INSERT INTO coaching_analyses (game_id, session_id, model_used, analysis_text)
-    VALUES (?, ?, ?, ?)
+    INSERT INTO coaching_analyses (game_id, session_id, model_used, analysis_text, scope, scope_identifier, title)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
-  const result = stmt.run(gameId, sessionId, modelUsed, analysisText);
+  const result = stmt.run(
+    gameId, sessionId, modelUsed, analysisText,
+    scope ?? "game", scopeIdentifier ?? null, title ?? null,
+  );
   return Number(result.lastInsertRowid);
+}
+
+// ── Analysis history ────────────────────────────────────────────────
+
+export interface AnalysisHistoryEntry {
+  id: number;
+  gameId: number | null;
+  sessionId: number | null;
+  scope: string;
+  scopeIdentifier: string | null;
+  title: string | null;
+  modelUsed: string;
+  analysisText: string;
+  createdAt: string;
+  playerCharacter: string | null;
+  opponentCharacter: string | null;
+  opponentTag: string | null;
+  stage: string | null;
+  result: string | null;
+}
+
+export function getAnalysisHistory(
+  limit: number = 20,
+  offset: number = 0,
+  scopeFilter?: string,
+): AnalysisHistoryEntry[] {
+  const where = scopeFilter ? "WHERE ca.scope = ?" : "";
+  const params = scopeFilter ? [scopeFilter, limit, offset] : [limit, offset];
+
+  return getDb().prepare(`
+    SELECT
+      ca.id, ca.game_id as gameId, ca.session_id as sessionId,
+      ca.scope, ca.scope_identifier as scopeIdentifier,
+      ca.title, ca.model_used as modelUsed,
+      ca.analysis_text as analysisText, ca.created_at as createdAt,
+      g.player_character as playerCharacter,
+      g.opponent_character as opponentCharacter,
+      g.opponent_tag as opponentTag,
+      g.stage, g.result
+    FROM coaching_analyses ca
+    LEFT JOIN games g ON ca.game_id = g.id
+    ${where}
+    ORDER BY ca.created_at DESC
+    LIMIT ? OFFSET ?
+  `).all(...params) as AnalysisHistoryEntry[];
 }
 
 // ── Session management ───────────────────────────────────────────────
@@ -928,6 +1043,138 @@ export function getOverallRecord(): { wins: number; losses: number; totalGames: 
   return row;
 }
 
+// ── Dashboard highlights ────────────────────────────────────────────
+
+export interface DashboardHighlights {
+  /** Best character by win rate (min 3 games) */
+  bestCharacter: { character: string; winRate: number; games: number } | null;
+  /** Worst matchup by win rate (min 3 games) */
+  worstMatchup: { opponentCharacter: string; winRate: number; games: number } | null;
+  /** Best matchup by win rate (min 3 games) */
+  bestMatchup: { opponentCharacter: string; winRate: number; games: number } | null;
+  /** Best stage by win rate (min 3 games) */
+  bestStage: { stage: string; winRate: number; games: number } | null;
+  /** Trend deltas: avg of last N games minus avg of previous N games */
+  trends: {
+    neutralWinRate: number;
+    lCancelRate: number;
+    edgeguardSuccessRate: number;
+    openingsPerKill: number;
+  };
+  /** Current streak: positive = win streak, negative = loss streak */
+  streak: number;
+}
+
+export function getDashboardHighlights(trendWindow: number = 10): DashboardHighlights {
+  const db = getDb();
+
+  // Best character
+  const bestChar = db.prepare(`
+    SELECT g.player_character as character,
+           ROUND(CAST(SUM(CASE WHEN g.result = 'win' THEN 1 ELSE 0 END) AS REAL) / COUNT(*), 4) as winRate,
+           COUNT(*) as games
+    FROM games g
+    GROUP BY g.player_character
+    HAVING COUNT(*) >= 3
+    ORDER BY winRate DESC
+    LIMIT 1
+  `).get() as { character: string; winRate: number; games: number } | undefined;
+
+  // Best matchup
+  const bestMu = db.prepare(`
+    SELECT g.opponent_character as opponentCharacter,
+           ROUND(CAST(SUM(CASE WHEN g.result = 'win' THEN 1 ELSE 0 END) AS REAL) / COUNT(*), 4) as winRate,
+           COUNT(*) as games
+    FROM games g
+    GROUP BY g.opponent_character
+    HAVING COUNT(*) >= 3
+    ORDER BY winRate DESC
+    LIMIT 1
+  `).get() as { opponentCharacter: string; winRate: number; games: number } | undefined;
+
+  // Worst matchup
+  const worstMu = db.prepare(`
+    SELECT g.opponent_character as opponentCharacter,
+           ROUND(CAST(SUM(CASE WHEN g.result = 'win' THEN 1 ELSE 0 END) AS REAL) / COUNT(*), 4) as winRate,
+           COUNT(*) as games
+    FROM games g
+    GROUP BY g.opponent_character
+    HAVING COUNT(*) >= 3
+    ORDER BY winRate ASC
+    LIMIT 1
+  `).get() as { opponentCharacter: string; winRate: number; games: number } | undefined;
+
+  // Best stage
+  const bestStage = db.prepare(`
+    SELECT g.stage,
+           ROUND(CAST(SUM(CASE WHEN g.result = 'win' THEN 1 ELSE 0 END) AS REAL) / COUNT(*), 4) as winRate,
+           COUNT(*) as games
+    FROM games g
+    GROUP BY g.stage
+    HAVING COUNT(*) >= 3
+    ORDER BY winRate DESC
+    LIMIT 1
+  `).get() as { stage: string; winRate: number; games: number } | undefined;
+
+  // Trend deltas: compare last N games vs previous N
+  const trendRows = db.prepare(`
+    SELECT gs.neutral_win_rate as neutralWinRate,
+           gs.l_cancel_rate as lCancelRate,
+           gs.edgeguard_success_rate as edgeguardSuccessRate,
+           gs.openings_per_kill as openingsPerKill
+    FROM games g
+    JOIN game_stats gs ON gs.game_id = g.id
+    ORDER BY g.played_at DESC
+    LIMIT ?
+  `).all(trendWindow * 2) as Array<{
+    neutralWinRate: number;
+    lCancelRate: number;
+    edgeguardSuccessRate: number;
+    openingsPerKill: number;
+  }>;
+
+  const recent = trendRows.slice(0, trendWindow);
+  const previous = trendRows.slice(trendWindow);
+
+  function avg(arr: typeof trendRows, key: keyof typeof trendRows[0]): number {
+    if (arr.length === 0) return 0;
+    return arr.reduce((s, r) => s + (r[key] ?? 0), 0) / arr.length;
+  }
+
+  const trends = previous.length > 0
+    ? {
+        neutralWinRate: avg(recent, "neutralWinRate") - avg(previous, "neutralWinRate"),
+        lCancelRate: avg(recent, "lCancelRate") - avg(previous, "lCancelRate"),
+        edgeguardSuccessRate: avg(recent, "edgeguardSuccessRate") - avg(previous, "edgeguardSuccessRate"),
+        openingsPerKill: avg(recent, "openingsPerKill") - avg(previous, "openingsPerKill"),
+      }
+    : { neutralWinRate: 0, lCancelRate: 0, edgeguardSuccessRate: 0, openingsPerKill: 0 };
+
+  // Current streak
+  const streakRows = db.prepare(`
+    SELECT g.result FROM games g ORDER BY g.played_at DESC LIMIT 20
+  `).all() as Array<{ result: string }>;
+
+  let streak = 0;
+  if (streakRows.length > 0) {
+    const first = streakRows[0]!.result;
+    for (const row of streakRows) {
+      if (row.result === first) streak++;
+      else break;
+    }
+    if (first === "loss") streak = -streak;
+  }
+
+  return {
+    bestCharacter: bestChar ?? null,
+    worstMatchup: worstMu ?? null,
+    bestMatchup: bestMu ?? null,
+    bestStage: bestStage ?? null,
+    trends,
+    streak,
+  };
+}
+
 // ── Recent games (for frontend) ──────────────────────────────────────
 
 export interface RecentGame {
@@ -1294,6 +1541,7 @@ export function clearAllGames(): void {
   db.exec(`
     DELETE FROM practice_plans;
     DELETE FROM coaching_analyses;
+    DELETE FROM highlights;
     DELETE FROM character_signature_stats;
     DELETE FROM game_stats;
     DELETE FROM games;
@@ -1404,6 +1652,98 @@ export function insertSignatureStats(gameId: number, signatureJson: string): voi
   `).run(gameId, signatureJson);
 }
 
+// ── Highlights ──────────────────────────────────────────────────────
+
+export interface HighlightRow {
+  id: number;
+  gameId: number;
+  type: string;
+  label: string;
+  description: string;
+  character: string;
+  victim: string;
+  startFrame: number;
+  timestamp: string;
+  damage: number;
+  startPercent: number;
+  didKill: boolean;
+  moves: string[];
+  stockNumber: number | null;
+}
+
+export function insertHighlights(
+  gameId: number,
+  highlights: {
+    type: string;
+    label: string;
+    description: string;
+    character: string;
+    victim: string;
+    startFrame: number;
+    timestamp: string;
+    damage: number;
+    startPercent: number;
+    didKill: boolean;
+    moves: string[];
+    stockNumber: number | null;
+  }[],
+): void {
+  if (highlights.length === 0) return;
+  const stmt = getDb().prepare(`
+    INSERT INTO highlights (game_id, type, label, description, character, victim, start_frame, timestamp, damage, start_percent, did_kill, moves_json, stock_number)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  for (const h of highlights) {
+    stmt.run(
+      gameId, h.type, h.label, h.description, h.character, h.victim,
+      h.startFrame, h.timestamp, h.damage, h.startPercent, h.didKill ? 1 : 0,
+      JSON.stringify(h.moves), h.stockNumber,
+    );
+  }
+}
+
+export function getGameHighlights(gameId: number): HighlightRow[] {
+  const rows = getDb().prepare(`
+    SELECT id, game_id as gameId, type, label, description, character, victim,
+           start_frame as startFrame, timestamp, damage, start_percent as startPercent,
+           did_kill as didKill, moves_json, stock_number as stockNumber
+    FROM highlights
+    WHERE game_id = ?
+    ORDER BY start_frame ASC
+  `).all(gameId) as (Omit<HighlightRow, "didKill" | "moves"> & { didKill: number; moves_json: string })[];
+
+  return rows.map((r) => ({
+    ...r,
+    didKill: r.didKill === 1,
+    moves: JSON.parse(r.moves_json) as string[],
+  }));
+}
+
+export function getRecentHighlights(limit: number = 20): (HighlightRow & {
+  replayPath: string;
+  opponentTag: string;
+  playedAt: string | null;
+})[] {
+  const rows = getDb().prepare(`
+    SELECT h.id, h.game_id as gameId, h.type, h.label, h.description,
+           h.character, h.victim,
+           h.start_frame as startFrame, h.timestamp, h.damage,
+           h.start_percent as startPercent,
+           h.did_kill as didKill, h.moves_json, h.stock_number as stockNumber,
+           g.replay_path as replayPath, g.opponent_tag as opponentTag, g.played_at as playedAt
+    FROM highlights h
+    JOIN games g ON g.id = h.game_id
+    ORDER BY g.played_at DESC, h.start_frame ASC
+    LIMIT ?
+  `).all(limit) as any[];
+
+  return rows.map((r) => ({
+    ...r,
+    didKill: r.didKill === 1,
+    moves: JSON.parse(r.moves_json) as string[],
+  }));
+}
+
 // ── Per-character game stats (for radar chart) ──────────────────────
 
 export interface CharacterGameStat {
@@ -1417,6 +1757,15 @@ export interface CharacterGameStat {
   edgeguardSuccessRate: number;
   wavedashCount: number;
   dashDanceFrames: number;
+  ledgeEntropy: number;
+  knockdownEntropy: number;
+  shieldPressureEntropy: number;
+  diSurvivalScore: number;
+  diComboScore: number;
+  powerShieldCount: number;
+  shieldPressureSequences: number;
+  shieldPressureAvgDamage: number;
+  playedAt: string | null;
 }
 
 export function getCharacterGameStats(character: string): CharacterGameStat[] {
@@ -1431,7 +1780,16 @@ export function getCharacterGameStats(character: string): CharacterGameStat[] {
       gs.recovery_success_rate as recoverySuccessRate,
       gs.edgeguard_success_rate as edgeguardSuccessRate,
       gs.wavedash_count as wavedashCount,
-      gs.dash_dance_frames as dashDanceFrames
+      gs.dash_dance_frames as dashDanceFrames,
+      gs.ledge_entropy as ledgeEntropy,
+      gs.knockdown_entropy as knockdownEntropy,
+      gs.shield_pressure_entropy as shieldPressureEntropy,
+      gs.di_survival_score as diSurvivalScore,
+      gs.di_combo_score as diComboScore,
+      gs.power_shield_count as powerShieldCount,
+      gs.shield_pressure_sequences as shieldPressureSequences,
+      gs.shield_pressure_avg_damage as shieldPressureAvgDamage,
+      g.played_at as playedAt
     FROM games g
     JOIN game_stats gs ON gs.game_id = g.id
     WHERE g.player_character = ?

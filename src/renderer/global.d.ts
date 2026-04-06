@@ -15,12 +15,16 @@ declare global {
       openFolder: () => Promise<string | null>;
       importFolder: (folderPath: string, targetPlayer: string) => Promise<any>;
       importAndAnalyze: (filePaths: string[], targetPlayer: string) => Promise<any>;
-      analyzeReplays: (replayPaths: string[], targetPlayer: string) => Promise<string>;
-      analyzeRecent: (count: number, targetPlayer: string) => Promise<string>;
+      analyzeReplays: (replayPaths: string[], targetPlayer: string, streamId?: string) => Promise<string>;
+      analyzeRecent: (count: number, targetPlayer: string, streamId?: string) => Promise<string>;
       analyzeTrends: (trendSummary: string) => Promise<string>;
+      analyzeScoped: (scope: string, id: string | number, targetPlayer?: string, streamId?: string) => Promise<string>;
+      analyzeDiscovery: (streamId?: string) => Promise<string>;
       getLLMModels: () => Promise<any[]>;
       getCurrentModel: () => Promise<{ modelId: string; label: string }>;
       fetchOpenRouterModels: () => Promise<any[]>;
+      fetchAllModels: () => Promise<any[]>;
+      getQueueStatus: () => Promise<{ pending: number; processing: boolean }>;
       getOverallRecord: () => Promise<any>;
       getMatchupRecords: () => Promise<any[]>;
       getStageRecords: () => Promise<any[]>;
@@ -35,14 +39,20 @@ declare global {
       getCharacterSignatureStats: (character: string) => Promise<any>;
       getCharacterGameStats: (character: string) => Promise<any[]>;
       getOpponentDetail: (opponentKey: string) => Promise<any>;
+      getDashboardHighlights: () => Promise<any>;
+      getGameHighlights: (gameId: number) => Promise<any[]>;
+      getRecentHighlights: (limit: number) => Promise<any[]>;
+      getAnalysisHistory: (limit: number, offset: number, scopeFilter?: string) => Promise<any[]>;
       openInDolphin: (replayPath: string) => Promise<boolean>;
+      openInDolphinAtFrame: (replayPath: string, frame: number) => Promise<boolean>;
+      getStockTimeline: (replayPath: string) => Promise<any>;
       openFileDialog: (title: string, filters: { name: string; extensions: string[] }[]) => Promise<string | null>;
       startWatcher: (replayFolder: string, targetPlayer: string) => Promise<boolean>;
       stopWatcher: () => Promise<boolean>;
       onImported: (callback: (result: any) => void) => () => void;
       onWatcherError: (callback: (message: string) => void) => () => void;
-      onAnalysisStream: (callback: (chunk: string) => void) => () => void;
-      onAnalysisStreamEnd: (callback: () => void) => () => void;
+      onAnalysisStream: (callback: (chunk: string, streamId?: string) => void) => () => void;
+      onAnalysisStreamEnd: (callback: (streamId?: string) => void) => () => void;
     };
   }
 }

@@ -1,14 +1,15 @@
 import crypto from "crypto";
 import fs from "fs";
+import { pipeline } from "stream/promises";
 import { loadConfig } from "../../config.js";
 import {
   getDb, insertCoachingAnalysis, getPlayerHistory,
   getGamesBySession, getGameById, getAggregateStats,
   getDeepInsightsData, insertGame, insertGameStats,
-  insertSignatureStats
+  insertSignatureStats, insertHighlights
 } from "../../db.js";
 import {
-  processGame, computeAdaptationSignals, findPlayerIdx,
+  computeAdaptationSignals, findPlayerIdx,
   assembleUserPrompt, SYSTEM_PROMPT,
   assembleAggregatePrompt, SYSTEM_PROMPT_AGGREGATE,
   assembleDiscoveryPrompt, SYSTEM_PROMPT_DISCOVERY,
@@ -16,9 +17,17 @@ import {
 } from "../../pipeline/index.js";
 import { callLLM, callLLMStream, LLM_DEFAULTS, type LLMConfig } from "../../llm.js";
 import { llmQueue } from "../../llmQueue.js";
+import { parsePool } from "../../parsePool.js";
 import { buildInsertGameParams, buildInsertGameStatsParams } from "../../replayAnalyzer.js";
 import { type SafeHandleFn, validatePath } from "../ipc.js";
 import { getMainWindow } from "../state.js";
+
+/** Async streaming SHA-256 hash — avoids blocking main thread on large files */
+async function hashFileAsync(filePath: string): Promise<string> {
+  const hash = crypto.createHash("sha256");
+  await pipeline(fs.createReadStream(filePath), hash);
+  return hash.digest("hex");
+}
 
 /** Build LLMConfig from user config + env vars */
 export function resolveLLMConfig(): LLMConfig {
@@ -73,7 +82,7 @@ export function registerAnalysisHandlers(safeHandle: SafeHandleFn): void {
     // Check DB cache for single replays — skip LLM if already analyzed
     if (safePaths.length === 1) {
       const db = getDb();
-      const fileHash = crypto.createHash("sha256").update(fs.readFileSync(safePaths[0]!)).digest("hex");
+      const fileHash = await hashFileAsync(safePaths[0]!);
       const currentModelId = llmConfig.modelId;
       const existingGame = db.prepare(
         "SELECT id FROM games WHERE replay_hash = ?",
@@ -89,11 +98,8 @@ export function registerAnalysisHandlers(safeHandle: SafeHandleFn): void {
       // Not cached — fall through to streaming path
     }
 
-    // Multi-replay (set analysis) — run full pipeline
-    const gameResults: GameResult[] = [];
-    for (let i = 0; i < safePaths.length; i++) {
-      gameResults.push(processGame(safePaths[i]!, i + 1));
-    }
+    // Multi-replay (set analysis) — parse off main thread via pool
+    const gameResults = await parsePool.parseMany(safePaths);
 
     if (gameResults.length === 0) {
       throw new Error("No games to analyze.");
@@ -128,7 +134,7 @@ export function registerAnalysisHandlers(safeHandle: SafeHandleFn): void {
     for (let i = 0; i < gameResults.length; i++) {
       const gameResult = gameResults[i]!;
       const filePath = safePaths[i]!;
-      const fileHash = crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
+      const fileHash = await hashFileAsync(filePath);
 
       const existing = db.prepare(
         "SELECT id FROM games WHERE replay_hash = ?",
@@ -144,6 +150,10 @@ export function registerAnalysisHandlers(safeHandle: SafeHandleFn): void {
         const player = gameResult.gameSummary.players[playerIdx];
         if (player.signatureStats) {
           insertSignatureStats(gameId, JSON.stringify(player.signatureStats));
+        }
+        const playerHighlights = gameResult.highlights[playerIdx];
+        if (playerHighlights && playerHighlights.length > 0) {
+          insertHighlights(gameId, playerHighlights);
         }
         gameIds.push(gameId);
       }
@@ -175,7 +185,7 @@ export function registerAnalysisHandlers(safeHandle: SafeHandleFn): void {
       ).get(game.id, llmConfig.modelId) as { analysis_text: string } | undefined;
       if (cached) return cached.analysis_text;
 
-      const result = processGame(game.replay_path, 1);
+      const result = await parsePool.parse(game.replay_path, 1);
       const playerHistory = getPlayerHistory(targetPlayer || game.player_tag) ?? undefined;
       userPrompt = assembleUserPrompt([result], targetPlayer || game.player_tag, playerHistory);
       gameIdForCache = game.id;
@@ -192,7 +202,7 @@ export function registerAnalysisHandlers(safeHandle: SafeHandleFn): void {
       const games = getGamesBySession(sessionId);
       if (games.length === 0) throw new Error("No games found for session");
       
-      const gameResults = games.map((g, i) => processGame(g.replay_path, i + 1));
+      const gameResults = await parsePool.parseMany(games.map((g) => g.replay_path));
       const { userPrompt: prompt } = runMultiGameAnalysis(gameResults, targetPlayer || "");
       userPrompt = prompt;
       sessionIdForCache = sessionId;
@@ -221,12 +231,18 @@ export function registerAnalysisHandlers(safeHandle: SafeHandleFn): void {
         (chunk) => {
           try {
             win?.webContents.send("analyze:stream", chunk, streamId);
-          } catch { }
+          } catch {
+            // ignore
+          }
         }
       )
     );
 
-    try { win?.webContents.send("analyze:stream-end", streamId); } catch { }
+    try {
+      win?.webContents.send("analyze:stream-end", streamId);
+    } catch {
+      // ignore
+    }
 
     insertCoachingAnalysis(gameIdForCache, sessionIdForCache, llmConfig.modelId, analysis);
     return analysis;
@@ -248,12 +264,18 @@ export function registerAnalysisHandlers(safeHandle: SafeHandleFn): void {
         (chunk) => {
           try {
             win?.webContents.send("analyze:stream", chunk, streamId);
-          } catch { }
+          } catch {
+            // ignore
+          }
         }
       )
     );
 
-    try { win?.webContents.send("analyze:stream-end", streamId); } catch { }
+    try {
+      win?.webContents.send("analyze:stream-end", streamId);
+    } catch {
+      // ignore
+    }
 
     return analysis;
   });
@@ -277,10 +299,7 @@ export function registerAnalysisHandlers(safeHandle: SafeHandleFn): void {
 
     const llmConfig = resolveLLMConfig();
 
-    const gameResults: GameResult[] = [];
-    for (let i = 0; i < paths.length; i++) {
-      gameResults.push(processGame(paths[i]!, i + 1));
-    }
+    const gameResults = await parsePool.parseMany(paths);
 
     const { userPrompt } = runMultiGameAnalysis(gameResults, targetPlayer);
     const win = getMainWindow();

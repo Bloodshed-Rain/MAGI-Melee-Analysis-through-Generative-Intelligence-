@@ -1,3 +1,5 @@
+import type { GameHighlight } from "./highlights.js";
+
 // ── Interfaces from the spec ──────────────────────────────────────────
 
 export interface PlayerSummary {
@@ -451,8 +453,11 @@ export interface DerivedInsights {
 export type GameResult = {
   gameSummary: GameSummary;
   derivedInsights: [DerivedInsights, DerivedInsights];
+  highlights: [GameHighlight[], GameHighlight[]];
   startAt: string | null;
 };
+
+export type { GameHighlight } from "./highlights.js";
 
 /** Historical player context for LLM coaching prompts */
 export interface PlayerHistory {

@@ -7,12 +7,14 @@ import {
   findPlayerIdx,
   type GameSummary,
   type DerivedInsights,
+  type GameHighlight,
   type PlayerSummary,
 } from "./pipeline";
 import {
   insertGame,
   insertGameStats,
   insertSignatureStats,
+  insertHighlights,
   type InsertGameParams,
   type InsertGameStatsParams,
 } from "./db";
@@ -50,6 +52,7 @@ export interface AnalysisGeneratorResult {
   gameResult: {
     gameSummary: GameSummary;
     derivedInsights: [DerivedInsights, DerivedInsights];
+    highlights: [GameHighlight[], GameHighlight[]];
     startAt: string | null;
   };
   targetPlayer: string;
@@ -89,6 +92,7 @@ let _generateAnalysis: AnalysisGenerator = async (filePath: string) => {
         { afterKnockdown: { options: [], entropy: 0 }, afterLedgeGrab: { options: [], entropy: 0 }, afterShieldPressure: { options: [], entropy: 0 }, performanceByStock: [], bestConversion: { moves: [], totalDamage: 0, startPercent: 0, endedInKill: false, timestamp: "0:00" }, worstMissedPunish: null, keyMoments: [], adaptationSignals: [] },
         { afterKnockdown: { options: [], entropy: 0 }, afterLedgeGrab: { options: [], entropy: 0 }, afterShieldPressure: { options: [], entropy: 0 }, performanceByStock: [], bestConversion: { moves: [], totalDamage: 0, startPercent: 0, endedInKill: false, timestamp: "0:00" }, worstMissedPunish: null, keyMoments: [], adaptationSignals: [] },
       ] as [DerivedInsights, DerivedInsights],
+      highlights: [[], []] as [GameHighlight[], GameHighlight[]],
       startAt: null,
     },
     targetPlayer: "Unknown",
@@ -296,6 +300,12 @@ export async function processReplay(
     const player = gameResult.gameSummary.players[playerIdx];
     if (player.signatureStats) {
       insertSignatureStats(gameId, JSON.stringify(player.signatureStats));
+    }
+
+    // Store highlights
+    const playerHighlights = gameResult.highlights[playerIdx];
+    if (playerHighlights && playerHighlights.length > 0) {
+      insertHighlights(gameId, playerHighlights);
     }
 
     // Insert coaching analysis

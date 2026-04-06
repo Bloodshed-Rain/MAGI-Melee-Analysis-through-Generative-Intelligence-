@@ -22,12 +22,6 @@ interface StageRecord {
   winRate: number;
 }
 
-interface OverallRecord {
-  wins: number;
-  losses: number;
-  totalGames: number;
-}
-
 function CountUp({ target, duration = 1200 }: { target: number; duration?: number }) {
   const [value, setValue] = useState(0);
   useEffect(() => {
@@ -48,14 +42,16 @@ function CountUp({ target, duration = 1200 }: { target: number; duration?: numbe
 }
 
 function getArchetype(stats: RadarStats): { name: string; description: string } {
-  const { neutral, punish, techSkill, defense, edgeguard, consistency } = stats;
-  const max = Math.max(neutral, punish, techSkill, defense, edgeguard, consistency);
+  const { neutral, punish, techSkill, defense, edgeguard, consistency, mixups, diQuality } = stats;
+  const max = Math.max(neutral, punish, techSkill, defense, edgeguard, consistency, mixups, diQuality);
 
   if (max === punish && punish > 60) return { name: "PUNISH DEMON", description: "Maximum damage off every opening" };
   if (max === neutral && neutral > 60) return { name: "NEUTRAL ACE", description: "Dominant in the footsies game" };
   if (max === techSkill && techSkill > 85) return { name: "TECH MONSTER", description: "Relentless execution" };
   if (max === defense && defense > 65) return { name: "WALL", description: "Nearly impossible to eliminate" };
   if (max === edgeguard && edgeguard > 60) return { name: "EDGE LORD", description: "Lethal at the ledge" };
+  if (max === mixups && mixups > 60) return { name: "WILDCARD", description: "Unpredictable and hard to download" };
+  if (max === diQuality && diQuality > 65) return { name: "IRON BODY", description: "Lives forever through clean DI" };
   if (max === consistency && consistency > 70) return { name: "ROCK", description: "Steady, reliable, untiltable" };
   return { name: "ALL-ROUNDER", description: "Balanced across all dimensions" };
 }
@@ -150,6 +146,17 @@ export function Profile({ refreshKey }: { refreshKey: number }) {
   const winRate = ((record.wins / record.totalGames) * 100).toFixed(1);
   const archetype = radarStats ? getArchetype(radarStats) : null;
 
+  // Aggregate stats for featured display
+  const avgPowershields = games && games.length > 0
+    ? (games.reduce((s: number, g: any) => s + (g.powerShieldCount ?? 0), 0) / games.length)
+    : 0;
+  const avgEdgeguard = games && games.length > 0
+    ? (games.reduce((s: number, g: any) => s + (g.edgeguardSuccessRate ?? 0), 0) / games.length)
+    : 0;
+  const avgLCancel = games && games.length > 0
+    ? (games.reduce((s: number, g: any) => s + (g.lCancelRate ?? 0), 0) / games.length)
+    : 0;
+
   return (
     <div>
       <motion.div
@@ -227,9 +234,37 @@ export function Profile({ refreshKey }: { refreshKey: number }) {
           {radarStats && (
             <div className="profile-radar-card">
               <div className="card-title">Skill Profile</div>
-              <PlayerRadar stats={radarStats} />
+              <PlayerRadar stats={radarStats} games={games ?? undefined} />
             </div>
           )}
+        </div>
+
+        {/* Featured Stats Row */}
+        <div className="profile-featured-stats">
+          <div className="profile-featured-stat">
+            <div className="profile-featured-value" style={{ color: "var(--accent)" }}>
+              {avgPowershields.toFixed(1)}
+            </div>
+            <Tooltip text="Average power shields per game. Reflects defensive timing and read quality against approaches and projectiles." position="bottom">
+              <span className="profile-featured-label">Power Shields / Game</span>
+            </Tooltip>
+          </div>
+          <div className="profile-featured-stat">
+            <div className="profile-featured-value" style={{ color: avgEdgeguard > 0.5 ? "var(--green)" : "var(--red)" }}>
+              {(avgEdgeguard * 100).toFixed(0)}%
+            </div>
+            <Tooltip text="How often your offstage attempts result in a stock taken" position="bottom">
+              <span className="profile-featured-label">Edgeguard Rate</span>
+            </Tooltip>
+          </div>
+          <div className="profile-featured-stat">
+            <div className="profile-featured-value" style={{ color: avgLCancel > 0.85 ? "var(--green)" : avgLCancel > 0.7 ? "var(--yellow)" : "var(--red)" }}>
+              {(avgLCancel * 100).toFixed(1)}%
+            </div>
+            <Tooltip text="Average L-cancel rate across all games" position="bottom">
+              <span className="profile-featured-label">L-Cancel Rate</span>
+            </Tooltip>
+          </div>
         </div>
       </motion.div>
 

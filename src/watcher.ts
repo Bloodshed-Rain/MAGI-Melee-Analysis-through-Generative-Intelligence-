@@ -79,27 +79,30 @@ export function watchReplays(options: WatcherOptions): { close: () => void } {
 
   console.log(`\nWatching for new .slp files in: ${replayFolder}`);
 
-  const watcher = chokidar.watch("**/*.slp", {
-    cwd: replayFolder,
+  const watcher = chokidar.watch(replayFolder, {
     ignoreInitial: true,
     awaitWriteFinish: {
       stabilityThreshold: 2000,
       pollInterval: 500,
     },
+    ignored: (filePath: string, stats?: fs.Stats) => {
+      if (!stats) return false;                        // allow directories through
+      return stats.isFile() && !filePath.endsWith(".slp");
+    },
   });
 
-  watcher.on("add", async (relativePath) => {
-    const absolutePath = path.join(replayFolder, relativePath);
+  watcher.on("add", async (absolutePath) => {
     gameCount++;
 
     try {
       const result = await importReplay(absolutePath, targetPlayer, gameCount);
 
+      const basename = path.basename(absolutePath);
       if (result.skipped) {
-        console.log(`[skip] Already imported: ${relativePath}`);
+        console.log(`[skip] Already imported: ${basename}`);
       } else {
         console.log(
-          `[imported] ${relativePath} → game #${result.gameId}`,
+          `[imported] ${basename} → game #${result.gameId}`,
         );
       }
 
@@ -110,7 +113,7 @@ export function watchReplays(options: WatcherOptions): { close: () => void } {
       });
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
-      console.error(`[error] Failed to import ${relativePath}: ${error.message}`);
+      console.error(`[error] Failed to import ${path.basename(absolutePath)}: ${error.message}`);
       onError?.(error, absolutePath);
     }
   });

@@ -80,6 +80,7 @@ function RoyIcon() { return <svg width="15" height="15" viewBox="0 0 16 16" fill
 
 // ── Icon Map ────────────────────────────────────────────────────────
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const THEME_ICONS: Record<string, React.FC> = {
   dark: MoonIcon,
   light: SunIcon,

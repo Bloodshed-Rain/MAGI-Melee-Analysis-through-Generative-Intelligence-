@@ -1,0 +1,196 @@
+/* ── Coaching Cards ───────────────────────────────────────────── */
+/* Card-based layout for AI coaching output. Replaces wall-of-text  */
+/* markdown with collapsible, visually-typed section cards.         */
+
+.cc-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.cc-placeholder {
+  padding: 24px;
+  text-align: center;
+}
+
+/* ── Individual Card ──────────────────────────────────────── */
+
+.cc-card {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--cc-accent, var(--accent));
+  border-radius: var(--radius-sm, 6px);
+  overflow: hidden;
+}
+
+.cc-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 14px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  color: var(--text);
+  font-family: inherit;
+}
+.cc-card-header:hover {
+  background: var(--bg-hover);
+}
+
+.cc-card-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--cc-accent, var(--accent)) 10%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cc-card-title-group {
+  flex: 1;
+  min-width: 0;
+}
+
+.cc-card-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--cc-accent, var(--accent));
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.cc-card-heading {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+  color: var(--text);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cc-card-chevron {
+  font-size: 10px;
+  color: var(--text-dim);
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+/* ── Summary (visible when collapsed) ────────────────── */
+
+.cc-card-summary {
+  padding: 0 14px 12px 54px; /* align with content after icon */
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── Expanded Body ──────────────────────────────────── */
+
+.cc-card-body {
+  overflow: hidden;
+}
+
+.cc-card-content {
+  padding: 0 14px 14px 14px;
+  border-top: 1px solid var(--border-subtle);
+  margin-top: 0;
+  padding-top: 12px;
+}
+
+/* Markdown typography inside cards */
+.cc-card-content h1,
+.cc-card-content h2,
+.cc-card-content h3,
+.cc-card-content h4 {
+  color: var(--text);
+  margin-top: 1em;
+  margin-bottom: 0.4em;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font-display);
+}
+.cc-card-content h3:first-child,
+.cc-card-content h4:first-child {
+  margin-top: 0;
+}
+
+.cc-card-content p {
+  margin-bottom: 0.75em;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.cc-card-content ul,
+.cc-card-content ol {
+  margin-bottom: 0.75em;
+  padding-left: 1.4em;
+}
+
+.cc-card-content li {
+  margin-bottom: 0.4em;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.cc-card-content strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.cc-card-content code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  background: var(--bg-hover);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+/* ── Streaming cursor ──────────────────────────────── */
+
+.cc-streaming-cursor {
+  display: inline-block;
+  width: 7px;
+  height: 1.1em;
+  background: var(--accent);
+  margin-left: 3px;
+  vertical-align: middle;
+  border-radius: 1px;
+  animation: cc-blink 1s step-end infinite;
+}
+
+@keyframes cc-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* ── Responsive ──────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .cc-card-summary {
+    padding-left: 14px;
+  }
+  .cc-card-icon {
+    display: none;
+  }
+  .cc-card-header {
+    gap: 6px;
+    padding: 10px 12px;
+  }
+}

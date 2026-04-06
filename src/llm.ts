@@ -372,6 +372,9 @@ async function callOpenRouterStream(
     ],
   });
 
+  let anyChunksSent = false;
+  const wrappedOnChunk: StreamChunkCallback = (chunk) => { anyChunksSent = true; onChunk(chunk); };
+
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -412,8 +415,11 @@ async function callOpenRouterStream(
       throw new Error(`OpenRouter API error (${response.status}): ${errorBody}`);
     }
 
-    const accumulated = await readOpenAICompatibleStream(response, onChunk, timeout);
+    const accumulated = await readOpenAICompatibleStream(response, wrappedOnChunk, timeout);
     if (accumulated) return accumulated;
+
+    // Only retry if no chunks were sent to the UI — prevents duplicate text on partial failures
+    if (anyChunksSent) throw new EmptyResponseError("streaming returned partial text");
 
     if (attempt < MAX_RETRIES) {
       console.error(`OpenRouter stream returned empty, retrying (${attempt}/${MAX_RETRIES})...`);
@@ -522,6 +528,8 @@ async function callGeminiStream(
     generationConfig: { maxOutputTokens: 8192 },
   });
 
+  let anyChunksSent = false;
+
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -600,6 +608,7 @@ async function callGeminiStream(
               const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
               if (text) {
                 accumulated += text;
+                anyChunksSent = true;
                 onChunk(text);
               }
             } catch {
@@ -613,6 +622,9 @@ async function callGeminiStream(
     }
 
     if (accumulated) return accumulated;
+
+    // Only retry if no chunks were sent to the UI — prevents duplicate text on partial failures
+    if (anyChunksSent) throw new EmptyResponseError("streaming returned partial text");
 
     if (attempt < MAX_RETRIES) {
       console.error(
@@ -722,6 +734,8 @@ async function callAnthropicStream(
     messages: [{ role: "user", content: userPrompt }],
   });
 
+  let anyChunksSent = false;
+
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -789,6 +803,7 @@ async function callAnthropicStream(
             };
             if (data.type === "content_block_delta" && data.delta?.text) {
               accumulated += data.delta.text;
+              anyChunksSent = true;
               onChunk(data.delta.text);
             }
           } catch {
@@ -801,6 +816,9 @@ async function callAnthropicStream(
     }
 
     if (accumulated) return accumulated;
+
+    // Only retry if no chunks were sent to the UI — prevents duplicate text on partial failures
+    if (anyChunksSent) throw new EmptyResponseError("streaming returned partial text");
 
     if (attempt < MAX_RETRIES) {
       console.error(`Anthropic stream returned empty, retrying (${attempt}/${MAX_RETRIES})...`);
@@ -831,7 +849,7 @@ async function callOpenAI(
   const url = "https://api.openai.com/v1/chat/completions";
   const body = JSON.stringify({
     model: modelId,
-    max_tokens: 8192,
+    max_completion_tokens: 8192,
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
@@ -901,13 +919,16 @@ async function callOpenAIStream(
   const url = "https://api.openai.com/v1/chat/completions";
   const body = JSON.stringify({
     model: modelId,
-    max_tokens: 8192,
+    max_completion_tokens: 8192,
     stream: true,
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
     ],
   });
+
+  let anyChunksSent = false;
+  const wrappedOnChunk: StreamChunkCallback = (chunk) => { anyChunksSent = true; onChunk(chunk); };
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     const controller = new AbortController();
@@ -947,8 +968,11 @@ async function callOpenAIStream(
       throw new Error(`OpenAI API error (${response.status}): ${errorBody}`);
     }
 
-    const accumulated = await readOpenAICompatibleStream(response, onChunk, timeout);
+    const accumulated = await readOpenAICompatibleStream(response, wrappedOnChunk, timeout);
     if (accumulated) return accumulated;
+
+    // Only retry if no chunks were sent to the UI — prevents duplicate text on partial failures
+    if (anyChunksSent) throw new EmptyResponseError("streaming returned partial text");
 
     if (attempt < MAX_RETRIES) {
       console.error(`OpenAI stream returned empty, retrying (${attempt}/${MAX_RETRIES})...`);

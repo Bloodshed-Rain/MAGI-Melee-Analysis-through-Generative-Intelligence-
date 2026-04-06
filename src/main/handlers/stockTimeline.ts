@@ -1,14 +1,15 @@
-import { processGame, findPlayerIdx } from "../../pipeline/index.js";
+import { findPlayerIdx } from "../../pipeline/index.js";
+import { parsePool } from "../../parsePool.js";
 import { loadConfig } from "../../config.js";
 import { validatePath, type SafeHandleFn } from "../ipc.js";
 
 export function registerStockTimelineHandlers(safeHandle: SafeHandleFn): void {
-  safeHandle("stats:stockTimeline", (_e, replayPath: string) => {
+  safeHandle("stats:stockTimeline", async (_e, replayPath: string) => {
     const safePath = validatePath(replayPath);
     const config = loadConfig();
     const target = config.connectCode || config.targetPlayer || "";
 
-    const result = processGame(safePath, 1);
+    const result = await parsePool.parse(safePath, 1);
     const { gameSummary } = result;
 
     const playerIdx = findPlayerIdx(gameSummary, target);

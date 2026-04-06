@@ -14,6 +14,8 @@ interface Config {
   anthropicApiKey: string | null;
   openaiApiKey: string | null;
   localEndpoint: string | null;
+  theme: string | null;
+  colorMode: string | null;
 }
 
 interface FetchedModel {
@@ -64,6 +66,8 @@ export function Settings({ onImport }: SettingsProps) {
     anthropicApiKey: null,
     openaiApiKey: null,
     localEndpoint: null,
+    theme: null,
+    colorMode: null,
   });
   const [saved, setSaved] = useState(false);
   const [showKeys, setShowKeys] = useState(false);
@@ -149,6 +153,7 @@ export function Settings({ onImport }: SettingsProps) {
   const handleThemeChange = useCallback((themeId: string) => {
     const mode = themeId as ColorMode;
     setColorMode(mode);
+    setConfig((prev) => ({ ...prev, colorMode: mode }));
     applyTheme(getResolvedTheme(mode, mode));
     window.clippi.loadConfig().then((c: any) => {
       window.clippi.saveConfig({ ...c, colorMode: mode });
@@ -185,7 +190,7 @@ export function Settings({ onImport }: SettingsProps) {
     try {
       const result = await window.clippi.importFolder(
         config.replayFolder,
-        config.connectCode ?? config.targetPlayer,
+        config.connectCode || config.targetPlayer,
       ) as {
         imported: number;
         skipped: number;

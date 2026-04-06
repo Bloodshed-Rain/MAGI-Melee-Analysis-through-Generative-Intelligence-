@@ -4,7 +4,13 @@ import { type SafeHandleFn, validatePath } from "../ipc.js";
 import { getMainWindow } from "../state.js";
 
 function createProgressSender(): ImportProgressCallback {
+  let lastSent = 0;
   return (progress: ImportProgress) => {
+    const now = Date.now();
+    // Throttle to ~10 updates/sec to prevent IPC flooding on large imports (65K+ files).
+    // Always send the final progress event.
+    if (now - lastSent < 100 && progress.current < progress.total) return;
+    lastSent = now;
     const win = getMainWindow();
     if (win && !win.isDestroyed()) {
       win.webContents.send("import:progress", progress);

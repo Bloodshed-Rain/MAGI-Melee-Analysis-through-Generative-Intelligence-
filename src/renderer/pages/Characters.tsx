@@ -37,41 +37,6 @@ const CHARACTER_CARDS: Record<string, string> = {
 
 // ── Types ────────────────────────────────────────────────────────────
 
-interface CharacterOverview {
-  character: string;
-  gamesPlayed: number;
-  wins: number;
-  losses: number;
-  winRate: number;
-  avgNeutralWinRate: number;
-  avgConversionRate: number;
-  avgLCancelRate: number;
-  avgOpeningsPerKill: number;
-  avgDamagePerOpening: number;
-  avgDeathPercent: number;
-  avgRecoverySuccessRate: number;
-  lastPlayed: string | null;
-}
-
-interface CharacterMatchup {
-  opponentCharacter: string;
-  gamesPlayed: number;
-  wins: number;
-  losses: number;
-  winRate: number;
-  avgNeutralWinRate: number;
-  avgConversionRate: number;
-  avgOpeningsPerKill: number;
-}
-
-interface CharacterStageStats {
-  stage: string;
-  gamesPlayed: number;
-  wins: number;
-  losses: number;
-  winRate: number;
-}
-
 interface SignatureStat {
   label: string;
   value: number;
@@ -581,7 +546,7 @@ export function Characters({ refreshKey }: { refreshKey: number }) {
                   {radarStats && (
                     <div className="card">
                       <div className="card-title">Skill Profile</div>
-                      <PlayerRadar stats={radarStats} />
+                      <PlayerRadar stats={radarStats} games={rawGameStats ?? undefined} />
                     </div>
                   )}
 

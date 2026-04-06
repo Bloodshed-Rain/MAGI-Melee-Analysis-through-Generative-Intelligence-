@@ -1,0 +1,1 @@
+- [Project Gaps (April 2026)](project_gaps_2026_04.md) — Missing features: practice plans (dead table), session AI summary (never populated), trend filters, game detail page, sig stat caveats, test coverage holes

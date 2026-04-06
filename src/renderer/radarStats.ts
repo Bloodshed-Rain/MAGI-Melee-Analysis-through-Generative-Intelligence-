@@ -1,5 +1,5 @@
 /**
- * Shared radar stat computation used by Profile and Characters pages.
+ * Radar stat computation — 8 skill axes.
  *
  * Axes:
  * - Neutral: win rate in neutral interactions
@@ -8,6 +8,8 @@
  * - Defense: avg death percent (50%) + recovery success rate (50%)
  * - Edgeguard: edgeguard success rate
  * - Consistency: low variance in neutral win rate across games
+ * - Mixups: entropy of ledge, knockdown, and shield pressure options
+ * - DI Quality: combo DI score (50%) + survival DI score (50%)
  */
 
 export interface RadarGameStats {
@@ -21,6 +23,12 @@ export interface RadarGameStats {
   edgeguardSuccessRate?: number;
   wavedashCount?: number;
   dashDanceFrames?: number;
+  ledgeEntropy?: number;
+  knockdownEntropy?: number;
+  shieldPressureEntropy?: number;
+  diSurvivalScore?: number;
+  diComboScore?: number;
+  playedAt?: string | null;
 }
 
 export interface RadarStats {
@@ -30,11 +38,13 @@ export interface RadarStats {
   defense: number;
   edgeguard: number;
   consistency: number;
+  mixups: number;
+  diQuality: number;
 }
 
 export function computeRadarStats(games: RadarGameStats[]): RadarStats {
   if (games.length === 0) {
-    return { neutral: 0, punish: 0, techSkill: 0, defense: 0, edgeguard: 0, consistency: 0 };
+    return { neutral: 0, punish: 0, techSkill: 0, defense: 0, edgeguard: 0, consistency: 0, mixups: 0, diQuality: 0 };
   }
 
   const avg = (fn: (g: RadarGameStats) => number) =>
@@ -50,11 +60,9 @@ export function computeRadarStats(games: RadarGameStats[]): RadarStats {
   const punish = clamp((dpo / 60) * 50 + convRate * 50);
 
   // Tech Skill: L-cancel (60%) + movement tech (40%)
-  // Movement = wavedash count + dash dance frames, normalized
   const lcancel = avg((g) => g.lCancelRate);
   const wavedashes = avg((g) => g.wavedashCount ?? 0);
   const dashDance = avg((g) => g.dashDanceFrames ?? 0);
-  // Normalize movement: wavedashes ~30/game is high, dash dance ~2000 frames is high
   const movementScore = clamp((wavedashes / 30) * 50 + (dashDance / 2000) * 50);
   const techSkill = clamp(lcancel * 100 * 0.6 + movementScore * 0.4);
 
@@ -74,7 +82,39 @@ export function computeRadarStats(games: RadarGameStats[]): RadarStats {
   const stdDev = Math.sqrt(variance);
   const consistency = clamp((1 - stdDev * 3) * 100);
 
-  return { neutral, punish, techSkill, defense, edgeguard, consistency };
+  // Mixups: average of ledge, knockdown, and shield pressure entropy
+  // Max entropy for ledge options (~5 options) is ~1.6, knockdown (~4) is ~1.4
+  // Normalize each to 0-100 scale, then average
+  const ledgeE = avg((g) => g.ledgeEntropy ?? 0);
+  const knockdownE = avg((g) => g.knockdownEntropy ?? 0);
+  const shieldE = avg((g) => g.shieldPressureEntropy ?? 0);
+  const mixups = clamp(
+    ((ledgeE / 1.6) * 33 + (knockdownE / 1.4) * 33 + (shieldE / 1.5) * 34),
+  );
+
+  // DI Quality: combo DI (50%) + survival DI (50%)
+  // Both are 0-1 scores where 0.5 is baseline
+  const comboDI = avg((g) => g.diComboScore ?? 0.5);
+  const survivalDI = avg((g) => g.diSurvivalScore ?? 0.5);
+  const diQuality = clamp(comboDI * 100 * 0.5 + survivalDI * 100 * 0.5);
+
+  return { neutral, punish, techSkill, defense, edgeguard, consistency, mixups, diQuality };
+}
+
+/** Filter games to a date window and compute radar stats for comparison */
+export function computeRadarForPeriod(
+  games: RadarGameStats[],
+  afterDate: string,
+  beforeDate?: string,
+): RadarStats | null {
+  const filtered = games.filter((g) => {
+    if (!g.playedAt) return false;
+    if (g.playedAt < afterDate) return false;
+    if (beforeDate && g.playedAt >= beforeDate) return false;
+    return true;
+  });
+  if (filtered.length < 3) return null;
+  return computeRadarStats(filtered);
 }
 
 function clamp(v: number): number {

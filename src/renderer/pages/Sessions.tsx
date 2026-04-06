@@ -1,24 +1,13 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import Markdown, { type Components } from "react-markdown";
 import {
   useSets,
   useOpponents,
   useOpponentDetail,
-  useConfig,
 } from "../hooks/queries";
 import { CoachingModal } from "../components/CoachingModal";
+import { Tooltip } from "../components/Tooltip";
 import { formatGameDate } from "../hooks";
-
-interface DetectedSet {
-  opponentTag: string;
-  opponentCharacter: string;
-  gameIds: number[];
-  startedAt: string;
-  wins: number;
-  losses: number;
-  draws: number;
-}
 
 type View = "sets" | "opponents";
 
@@ -75,24 +64,6 @@ interface OpponentDetail {
   games: OpponentDetailGame[];
   stageBreakdown: OpponentStageBreakdown[];
   characterBreakdown: OpponentCharacterBreakdown[];
-}
-
-/** Pre-process coaching markdown to convert [M:SS] timestamps into clickable links */
-function injectTimestampLinks(text: string): string {
-  return text.replace(/\[(\d{1,2}:\d{2})\]/g, "[$1](timestamp:$1)");
-}
-
-function makeTimestampComponents(): Components {
-  return {
-    a: ({ href, children }) => {
-      if (href?.startsWith("timestamp:")) {
-        return (
-          <span className="sessions-timestamp">{children}</span>
-        );
-      }
-      return <a href={href}>{children}</a>;
-    },
-  };
 }
 
 function rateColor(rate: number): string {
@@ -156,7 +127,7 @@ function OpponentDetailPanel({
 }: {
   detail: OpponentDetail;
   onClose: () => void;
-  onTriggerCoaching: (scope: "game" | "session" | "character" | "stage" | "opponent", id: string | number, title: string) => void;
+  onTriggerCoaching: (scope: "game" | "session" | "character" | "stage" | "opponent", id: string | number, title: string, replayPath?: string) => void;
 }) {
   const winPct = detail.winRate * 100;
   const recordColor = winPct >= 60 ? "var(--green)" : winPct >= 45 ? "var(--yellow)" : "var(--red)";
@@ -261,9 +232,9 @@ function OpponentDetailPanel({
                 <th>Them</th>
                 <th>Stage</th>
                 <th>Result</th>
-                <th>Neut.</th>
-                <th>Op/K</th>
-                <th>Edge.</th>
+                <th><Tooltip text="Neutral win rate — how often you win the first hit in an exchange. Above 50% means you're winning neutral." position="bottom"><span>Neut.</span></Tooltip></th>
+                <th><Tooltip text="Openings per kill — how many neutral wins it takes you to get a stock. Lower is better (3-4 is strong)." position="bottom"><span>Op/K</span></Tooltip></th>
+                <th><Tooltip text="Edgeguard success rate — how often your offstage attempts result in a stock taken." position="bottom"><span>Edge.</span></Tooltip></th>
                 <th>Coaching</th>
               </tr>
             </thead>
@@ -307,7 +278,7 @@ function OpponentDetailPanel({
                       <button 
                         className="btn btn-icon-small" 
                         title="Get AI Coaching for this game"
-                        onClick={() => onTriggerCoaching("game", g.id, `Game vs ${detail.opponentTag} on ${g.stage}`)}
+                        onClick={() => onTriggerCoaching("game", g.id, `Game vs ${detail.opponentTag} on ${g.stage}`, g.replayPath)}
                       >
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M12 2a10 10 0 1 0 10 10H12V2z"/><path d="M12 12L2.1 12.1"/><path d="M12 12L19 19"/><path d="M12 12V22"/>
@@ -349,11 +320,11 @@ export function Sessions({ refreshKey }: { refreshKey: number }) {
     scope: "game" | "session" | "character" | "stage" | "opponent";
     id: string | number;
     title: string;
+    replayPath?: string;
   } | null>(null);
 
   const { data: sets = [], isLoading: setsLoading, refetch: refetchSets } = useSets();
   const { data: opponents = [], isLoading: oppsLoading, refetch: refetchOpps } = useOpponents(searchQuery || undefined);
-  const { data: config } = useConfig();
 
   // Opponent detail state
   const [expandedOpponent, setExpandedOpponent] = useState<string | null>(null);
@@ -390,9 +361,10 @@ export function Sessions({ refreshKey }: { refreshKey: number }) {
   const handleTriggerCoaching = useCallback((
     scope: "game" | "session" | "character" | "stage" | "opponent",
     id: string | number,
-    title: string
+    title: string,
+    replayPath?: string,
   ) => {
-    setScopedCoaching({ scope, id, title });
+    setScopedCoaching({ scope, id, title, replayPath });
   }, []);
 
   if (loading) {
@@ -423,6 +395,7 @@ export function Sessions({ refreshKey }: { refreshKey: number }) {
             scope={scopedCoaching.scope}
             id={scopedCoaching.id}
             title={scopedCoaching.title}
+            replayPath={scopedCoaching.replayPath}
           />
         )}
       </AnimatePresence>

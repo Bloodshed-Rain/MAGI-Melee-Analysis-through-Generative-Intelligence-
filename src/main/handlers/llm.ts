@@ -1,5 +1,5 @@
 import { loadConfig } from "../../config.js";
-import { MODELS, LLM_DEFAULTS, getModelLabel, type ModelOption, type ProviderId } from "../../llm.js";
+import { MODELS, LLM_DEFAULTS, getModelLabel, type ProviderId } from "../../llm.js";
 import { llmQueue } from "../../llmQueue.js";
 import type { SafeHandleFn } from "../ipc.js";
 

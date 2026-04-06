@@ -456,14 +456,6 @@ function Check() {
   );
 }
 
-function FolderIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5 }}>
-      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-    </svg>
-  );
-}
-
 function CharacterImage({ char }: { char: typeof CHARACTERS[0] }) {
   const [error, setError] = useState(false);
   const src = new URL(`../assets/characters/${char.image}`, import.meta.url).href;
@@ -504,7 +496,9 @@ export function Onboarding({ onComplete, onSkip }: OnboardingProps) {
         if (config?.targetPlayer) setTag(config.targetPlayer);
         if (config?.connectCode) setConnectCode(config.connectCode);
         if (config?.replayFolder) setFolder(config.replayFolder);
-      } catch { }
+      } catch {
+        // ignore
+      }
     }
     load();
   }, []);
@@ -525,7 +519,9 @@ export function Onboarding({ onComplete, onSkip }: OnboardingProps) {
         targetPlayer: tag || null,
         connectCode: connectCode || null,
       });
-    } catch { }
+    } catch {
+      // ignore
+    }
     advance();
   }, [tag, connectCode, advance]);
 
@@ -542,7 +538,9 @@ export function Onboarding({ onComplete, onSkip }: OnboardingProps) {
         ...config,
         replayFolder: folder,
       });
-    } catch { }
+    } catch {
+      // ignore
+    }
     advance();
   }, [folder, advance]);
 
@@ -582,7 +580,9 @@ export function Onboarding({ onComplete, onSkip }: OnboardingProps) {
           ...config,
           colorMode: selectedChar,
         });
-      } catch { }
+      } catch {
+        // ignore
+      }
     }
     onComplete();
   }, [selectedChar, onComplete]);

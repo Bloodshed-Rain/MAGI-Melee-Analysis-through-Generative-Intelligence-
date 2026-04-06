@@ -32,6 +32,7 @@ import { processGame, assembleUserPrompt, SYSTEM_PROMPT } from "../pipeline";
 import { callLLM } from "../llm";
 import { setAnalysisGenerator } from "../replayAnalyzer";
 import { llmQueue } from "../llmQueue";
+import { parsePool } from "../parsePool";
 import { setMainWindow, getFileWatcher } from "./state";
 import { setupIPC } from "./ipc";
 import { resolveLLMConfig } from "./handlers/analysis";
@@ -137,6 +138,7 @@ app.whenReady().then(() => {
       gameResult: {
         gameSummary: result.gameSummary,
         derivedInsights: result.derivedInsights,
+        highlights: result.highlights,
         startAt: result.startAt,
       },
       targetPlayer: targetTag,
@@ -174,6 +176,7 @@ app.on("window-all-closed", () => {
     watcher.close();
   }
   llmQueue.clear();
+  parsePool.terminate();
   closeDb();
   if (process.platform !== "darwin") {
     app.quit();

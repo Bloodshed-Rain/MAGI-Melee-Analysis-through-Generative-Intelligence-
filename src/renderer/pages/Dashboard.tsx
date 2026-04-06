@@ -1,10 +1,12 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import Markdown, { type Components } from "react-markdown";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import { motion } from "framer-motion";
+import Markdown from "react-markdown";
+import { AnimatePresence } from "framer-motion";
 import { Onboarding } from "../components/Onboarding";
-import { StockTimeline } from "../components/StockTimeline";
+import { CoachingModal } from "../components/CoachingModal";
 import { Tooltip } from "../components/Tooltip";
-import { useRecentGames, useConfig, useOverallRecord } from "../hooks/queries";
+import { useRecentGames, useOverallRecord, useDashboardHighlights, useRecentHighlights } from "../hooks/queries";
+import { HighlightCards } from "../components/HighlightCards";
 import { formatGameDate } from "../hooks";
 
 /** Returns a CSS color variable based on thresholds: good (green), ok (yellow), bad (red) */
@@ -12,73 +14,6 @@ function statColor(value: number, goodAbove: number, okAbove?: number): string {
   if (value > goodAbove) return "var(--green)";
   if (okAbove !== undefined && value > okAbove) return "var(--yellow)";
   return "var(--red)";
-}
-
-/** Same as statColor but lower is better (e.g. openings per kill) */
-function statColorInverse(value: number, goodBelow: number, okBelow: number): string {
-  if (!Number.isFinite(value)) return "var(--text-muted)";
-  if (value <= goodBelow) return "var(--green)";
-  if (value <= okBelow) return "var(--yellow)";
-  return "var(--red)";
-}
-
-const FPS = 60;
-const FIRST_PLAYABLE = -123; // Frames.FIRST_PLAYABLE from slippi-js
-
-/** Convert a "M:SS" timestamp string back to a game frame number */
-function timestampToFrame(ts: string): number {
-  const parts = ts.split(":");
-  if (parts.length !== 2) return 0;
-  const minutes = parseInt(parts[0]!, 10);
-  const seconds = parseInt(parts[1]!, 10);
-  if (isNaN(minutes) || isNaN(seconds)) return 0;
-  return (minutes * 60 + seconds) * FPS + FIRST_PLAYABLE;
-}
-
-/** Pre-process coaching markdown to convert [M:SS] timestamps into inline code spans */
-function injectTimestampLinks(text: string): string {
-  return text.replace(/\[(\d{1,2}:\d{2})\]/g, "`ts:$1`");
-}
-
-/** Create react-markdown components that render timestamp code spans as clickable buttons */
-function makeTimestampComponents(replayPath: string): Components {
-  return {
-    code: ({ children }) => {
-      const text = String(children);
-      const match = text.match(/^ts:(\d{1,2}:\d{2})$/);
-      if (match) {
-        const ts = match[1]!;
-        const frame = timestampToFrame(ts);
-        const handleClick = async (e: React.MouseEvent) => {
-          e.preventDefault();
-          e.stopPropagation();
-          try {
-            await window.clippi.openInDolphinAtFrame(replayPath, frame);
-          } catch (err) {
-            console.error("Failed to open Dolphin at timestamp:", err);
-          }
-        };
-        return (
-          <button
-            onClick={handleClick}
-            className="timestamp-link"
-            title={`Open replay at ${ts} — Dolphin will fast-forward to this point, hang tight`}
-          >
-            ▶ {ts}
-          </button>
-        );
-      }
-      return <code>{children}</code>;
-    },
-    a: ({ href, children }) => {
-      // Prevent any remaining links from navigating the Electron renderer
-      return (
-        <a href={href} target="_blank" rel="noopener noreferrer" onClick={(e) => e.preventDefault()}>
-          {children}
-        </a>
-      );
-    },
-  };
 }
 
 interface RecentGame {
@@ -98,14 +33,45 @@ interface RecentGame {
   replayPath: string;
 }
 
-// Animated stat with count-up
-function PulseStat({ value, label, color, index, tip }: {
+// ── Trend Arrow ──────────────────────────────────────────────────────
+
+function TrendArrow({ delta, invert }: { delta: number; invert?: boolean }) {
+  const threshold = 0.005;
+  const improving = invert ? delta < -threshold : delta > threshold;
+  const declining = invert ? delta > threshold : delta < -threshold;
+
+  if (!improving && !declining) {
+    return <span className="trend-arrow trend-flat" title="Stable">&mdash;</span>;
+  }
+
+  return improving ? (
+    <span className="trend-arrow trend-up" title={`+${(Math.abs(delta) * 100).toFixed(1)}%`}>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="18 15 12 9 6 15" />
+      </svg>
+    </span>
+  ) : (
+    <span className="trend-arrow trend-down" title={`-${(Math.abs(delta) * 100).toFixed(1)}%`}>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="6 9 12 15 18 9" />
+      </svg>
+    </span>
+  );
+}
+
+// ── Stat Pulse with Trend Arrows ─────────────────────────────────────
+
+interface PulseStatProps {
   value: string;
   label: string;
   color: string;
   index: number;
   tip?: string;
-}) {
+  delta?: number;
+  invertDelta?: boolean;
+}
+
+function PulseStat({ value, label, color, index, tip, delta, invertDelta }: PulseStatProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 16, scale: 0.95 }}
@@ -113,7 +79,10 @@ function PulseStat({ value, label, color, index, tip }: {
       transition={{ delay: 0.1 + index * 0.08, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       className="stat-box"
     >
-      <div className="stat-value" style={{ color }}>{value}</div>
+      <div className="stat-value-row">
+        <span className="stat-value" style={{ color }}>{value}</span>
+        {delta !== undefined && <TrendArrow delta={delta} invert={invertDelta} />}
+      </div>
       {tip ? (
         <Tooltip text={tip} position="bottom">
           <span className="stat-label">{label}</span>
@@ -125,183 +94,231 @@ function PulseStat({ value, label, color, index, tip }: {
   );
 }
 
-// Quick-glance stats from the last session
-function SessionPulse({ games, record }: { games: RecentGame[]; record?: { wins: number; losses: number; totalGames: number } }) {
-  if (games.length === 0) return null;
+// ── Highlight Card ───────────────────────────────────────────────────
 
-  const wins = record?.wins ?? games.filter((g) => g.result === "win").length;
-  const losses = record?.losses ?? games.length - wins;
-  const avgNeutral = games.reduce((s, g) => s + g.neutralWinRate, 0) / games.length;
-  const avgLCancel = games.reduce((s, g) => s + g.lCancelRate, 0) / games.length;
-
-  const recordColor = wins > losses ? "var(--green)" : wins < losses ? "var(--red)" : "var(--text)";
-  const stats = [
-    { label: "Record", value: `${wins}W-${losses}L`, color: recordColor, tip: "Overall win/loss record across all games" },
-    { label: "Neutral WR", value: `${(avgNeutral * 100).toFixed(1)}%`, color: statColor(avgNeutral, 0.5), tip: "How often you win the neutral game — first hit in an exchange. Above 50% means you're winning more openers than your opponent." },
-    { label: "L-Cancel", value: `${(avgLCancel * 100).toFixed(1)}%`, color: statColor(avgLCancel, 0.85), tip: "Percentage of aerial landings where you successfully L-cancelled. 85%+ is good, 95%+ is top-level." },
-    { label: "Games", value: `${record?.totalGames ?? games.length}`, color: "var(--text)", tip: "Total games played" },
-  ];
-
-  return (
-    <div className="session-pulse">
-      {stats.map((s, i) => (
-        <PulseStat key={s.label} value={s.value} label={s.label} color={s.color} index={i} tip={s.tip} />
-      ))}
-    </div>
-  );
-}
-
-const TIMESTAMP_PATTERN = /\[\d{1,2}:\d{2}\]/;
-
-/** Renders analysis markdown with memoized timestamp components to avoid full re-parse on every render */
-function GameAnalysisText({ replayPath, text, isStreaming, showTimestampHint }: {
-  replayPath: string;
-  text: string;
-  isStreaming?: boolean;
-  showTimestampHint?: boolean;
+function HighlightCard({ title, value, sub, color, icon, index }: {
+  title: string;
+  value: string;
+  sub: string;
+  color: string;
+  icon: React.ReactNode;
+  index: number;
 }) {
-  const components = useMemo(() => makeTimestampComponents(replayPath), [replayPath]);
-  const processed = useMemo(() => injectTimestampLinks(text), [text]);
-  const hasTimestamps = showTimestampHint && TIMESTAMP_PATTERN.test(text);
-
   return (
-    <div className="analysis-text">
-      <Markdown components={components}>{processed}</Markdown>
-      {isStreaming && <span className="streaming-cursor" />}
-      {hasTimestamps && (
-        <p className="timestamp-hint">
-          Timestamps open the replay in Dolphin — it'll fast-forward to the moment, so give it a sec.
-        </p>
-      )}
-    </div>
+    <motion.div
+      className="dash-highlight-card"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.2 + index * 0.06, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+    >
+      <div className="dash-highlight-icon" style={{ color }}>{icon}</div>
+      <div className="dash-highlight-body">
+        <div className="dash-highlight-title">{title}</div>
+        <div className="dash-highlight-value" style={{ color }}>{value}</div>
+        <div className="dash-highlight-sub">{sub}</div>
+      </div>
+    </motion.div>
   );
 }
+
+// ── Recent Trend AI Insight ──────────────────────────────────────────
+
+/** Build a compact stat summary for the LLM from recent games */
+function buildRecentSummary(games: RecentGame[]): string {
+  const wins = games.filter(g => g.result === "win").length;
+  const losses = games.length - wins;
+  const avg = (fn: (g: RecentGame) => number) =>
+    (games.reduce((s, g) => s + fn(g), 0) / games.length);
+
+  const matchups = games.map(g => `${g.playerCharacter} vs ${g.opponentCharacter} (${g.result})`).join(", ");
+
+  return [
+    `Last ${games.length} games summary:`,
+    `Record: ${wins}W-${losses}L`,
+    `Matchups played: ${matchups}`,
+    "",
+    "Average stats across these games:",
+    `- Neutral win rate: ${(avg(g => g.neutralWinRate) * 100).toFixed(1)}%`,
+    `- L-cancel rate: ${(avg(g => g.lCancelRate) * 100).toFixed(1)}%`,
+    `- Edgeguard success: ${(avg(g => g.edgeguardSuccessRate) * 100).toFixed(1)}%`,
+    `- Openings per kill: ${avg(g => g.openingsPerKill).toFixed(1)}`,
+    "",
+    "Individual game results:",
+    ...games.map((g, i) =>
+      `  Game ${i + 1}: ${g.playerCharacter} vs ${g.opponentCharacter} (${g.opponentTag}) on ${g.stage} — ${g.result.toUpperCase()} ${g.playerFinalStocks}-${g.opponentFinalStocks} | Neutral ${(g.neutralWinRate * 100).toFixed(0)}%, L-Cancel ${(g.lCancelRate * 100).toFixed(0)}%, Edge ${(g.edgeguardSuccessRate * 100).toFixed(0)}%`
+    ),
+    "",
+    "Give a concise dashboard summary: overall trajectory, what's working, what needs work, and one thing to focus on next session. Do NOT analyze each game individually — synthesize across all of them.",
+  ].join("\n");
+}
+
+function RecentInsight({ games }: { games: RecentGame[] }) {
+  const [insight, setInsight] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [gameCountAtLastRun, setGameCountAtLastRun] = useState(0);
+  const runningRef = useRef(false);
+
+  const recentFive = useMemo(() => games.slice(0, 5), [games]);
+  const gameKey = useMemo(() => recentFive.map(g => g.id).join(","), [recentFive]);
+
+  const runInsight = useCallback(async () => {
+    if (recentFive.length < 3 || runningRef.current) return;
+    runningRef.current = true;
+    setLoading(true);
+    setInsight(null);
+    setError(null);
+
+    try {
+      const summary = buildRecentSummary(recentFive);
+      const result = await window.clippi.analyzeTrends(summary);
+      setInsight(result);
+      setGameCountAtLastRun(games.length);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoading(false);
+      runningRef.current = false;
+    }
+  }, [recentFive, games.length]);
+
+  // Auto-run when games change and we haven't analyzed this set yet
+  useEffect(() => {
+    if (recentFive.length >= 3 && !insight && !loading && games.length !== gameCountAtLastRun) {
+      runInsight();
+    }
+  }, [gameKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (recentFive.length < 3) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.3, duration: 0.4 }}
+    >
+      <div className="card dash-insight-card">
+        <div className="dash-insight-header">
+          <div className="dash-insight-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" fill="rgba(var(--accent-rgb), 0.15)" stroke="currentColor"/>
+            </svg>
+          </div>
+          <div>
+            <div className="dash-insight-title">Recent Trend Analysis</div>
+            <div className="dash-insight-sub">Last {recentFive.length} games</div>
+          </div>
+          {insight && !loading && (
+            <button className="btn dash-insight-refresh" onClick={runInsight}>Refresh</button>
+          )}
+        </div>
+
+        {loading && (
+          <div className="analyze-loading" style={{ padding: "20px 0" }}>
+            <div className="spinner" />
+            <span>Analyzing recent games...</span>
+          </div>
+        )}
+
+        {error && (
+          <p className="coaching-error" style={{ margin: "12px 0 0" }}>{error}</p>
+        )}
+
+        {insight && (
+          <div className="dash-insight-body">
+            <Markdown>{insight}</Markdown>
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+// ── Compact Game Row ────────────────────────────────────────────────
+
+function CompactGameRow({ game, index, onClick }: { game: RecentGame; index: number; onClick: () => void }) {
+  return (
+    <motion.div
+      className="dash-game-row"
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
+      initial={{ opacity: 0, x: -8 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: Math.min(index * 0.02, 0.12), duration: 0.2 }}
+    >
+      <span className={game.result === "win" ? "result-badge win" : "result-badge loss"}>
+        {game.result === "win" ? "W" : "L"}
+      </span>
+      <span className="dash-game-stocks">{game.playerFinalStocks}-{game.opponentFinalStocks}</span>
+      <span className="dash-game-matchup">
+        {game.playerCharacter} <span className="dash-game-vs">vs</span> {game.opponentCharacter}
+      </span>
+      <span className="dash-game-opponent">{game.opponentTag}</span>
+      <span className="dash-game-stage">{game.stage}</span>
+      <span className="dash-game-stat" style={{ color: statColor(game.neutralWinRate, 0.5) }}>
+        {(game.neutralWinRate * 100).toFixed(0)}%
+      </span>
+      <span className="dash-game-stat" style={{ color: statColor(game.lCancelRate, 0.85, 0.7) }}>
+        {(game.lCancelRate * 100).toFixed(0)}%
+      </span>
+      <span className="dash-game-stat" style={{ color: statColor(game.edgeguardSuccessRate, 0.6, 0.3) }}>
+        {(game.edgeguardSuccessRate * 100).toFixed(0)}%
+      </span>
+      <span className="dash-game-date">{formatGameDate(game.playedAt)}</span>
+    </motion.div>
+  );
+}
+
+// ── SVG Icons ────────────────────────────────────────────────────────
+
+const TrophyIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
+    <path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20 7 22"/>
+    <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20 17 22"/>
+    <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
+  </svg>
+);
+
+const AlertIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+    <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+  </svg>
+);
+
+const MapIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/>
+    <line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/>
+  </svg>
+);
+
+const UserIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+  </svg>
+);
+
+// ── Main Dashboard ───────────────────────────────────────────────────
 
 export function Dashboard({ refreshKey }: { refreshKey: number }) {
-  const { data: games = [], isLoading: loading, refetch } = useRecentGames(20);
+  const { data: games = [], isLoading: loading, refetch } = useRecentGames(100);
   const { data: record, refetch: refetchRecord } = useOverallRecord();
-  const { data: config } = useConfig();
+  const { data: highlights, refetch: refetchHighlights } = useDashboardHighlights();
+  const { data: recentHighlights = [] } = useRecentHighlights(10);
   const [onboardingDismissed, setOnboardingDismissed] = useState(false);
-
-  // Discovery / Oracle state
-  const [discovery, setDiscovery] = useState<string | null>(null);
-  const [isDiscovering, setIsDiscovering] = useState(false);
-  const [discoveryStream, setDiscoveryStream] = useState("");
-  const [discoveryError, setDiscoveryError] = useState<string | null>(null);
-
-  // Per-game analysis state
-  const [expandedGame, setExpandedGame] = useState<number | null>(null);
-  const [analysisCache, setAnalysisCache] = useState<Record<number, string>>({});
-  const [analyzingGame, setAnalyzingGame] = useState<number | null>(null);
-  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
-  const [queueStatus, setQueueStatus] = useState<{ pending: number; processing: boolean } | null>(null);
-  const [dolphinError, setDolphinError] = useState<string | null>(null);
-  const [launchingDolphin, setLaunchingDolphin] = useState<number | null>(null);
-  // Streaming state: text accumulating in real-time
-  const [streamingText, setStreamingText] = useState<string>("");
-  const [isStreaming, setIsStreaming] = useState(false);
-
-  const handleWatchReplay = async (e: React.MouseEvent, game: RecentGame) => {
-    e.stopPropagation();
-    setDolphinError(null);
-    setLaunchingDolphin(game.id);
-    try {
-      await window.clippi.openInDolphin(game.replayPath);
-    } catch (err: unknown) {
-      setDolphinError(err instanceof Error ? err.message : String(err));
-    }
-    setLaunchingDolphin(null);
-  };
+  const [coaching, setCoaching] = useState<{ id: number; title: string; replayPath: string } | null>(null);
+  const [showAll, setShowAll] = useState(false);
+  const INITIAL_COUNT = 10;
 
   useEffect(() => {
     refetch();
     refetchRecord();
-  }, [refreshKey, refetch, refetchRecord]);
-
-  const handleGameClick = async (game: RecentGame) => {
-    if (expandedGame === game.id) {
-      setExpandedGame(null);
-      return;
-    }
-
-    setExpandedGame(game.id);
-    setAnalyzeError(null);
-    setDolphinError(null);
-
-    if (analysisCache[game.id]) return;
-
-    setAnalyzingGame(game.id);
-    setStreamingText("");
-    setIsStreaming(false);
-    setQueueStatus(null);
-
-    // Fetch queue status for progress feedback
-    window.clippi.getQueueStatus().then(setQueueStatus).catch(() => {});
-
-    // Subscribe to streaming chunks (scoped by streamId to prevent cross-listener collision)
-    const streamId = crypto.randomUUID();
-    const unsubStream = window.clippi.onAnalysisStream((chunk: string, sid?: string) => {
-      if (sid !== undefined && sid !== streamId) return;
-      setIsStreaming(true);
-      setStreamingText((prev) => prev + chunk);
-    });
-    const unsubEnd = window.clippi.onAnalysisStreamEnd((sid?: string) => {
-      if (sid !== undefined && sid !== streamId) return;
-      setIsStreaming(false);
-    });
-
-    try {
-      const target = config?.connectCode || config?.targetPlayer || "";
-      const result = await window.clippi.analyzeReplays([game.replayPath], target, streamId);
-      // Cache the final complete text (from the invoke return value)
-      setAnalysisCache((prev) => ({ ...prev, [game.id]: result }));
-      setStreamingText("");
-    } catch (err: unknown) {
-      setAnalyzeError(err instanceof Error ? err.message : String(err));
-      setStreamingText("");
-    } finally {
-      unsubStream();
-      unsubEnd();
-      setIsStreaming(false);
-      setAnalyzingGame(null);
-      setQueueStatus(null);
-    }
-  };
-
-  const handleRunDiscovery = async () => {
-    setIsDiscovering(true);
-    setDiscoveryStream("");
-    setDiscovery(null);
-    setDiscoveryError(null);
-
-    const discoveryStreamId = crypto.randomUUID();
-    const unsubStream = window.clippi.onAnalysisStream((chunk: string, sid?: string) => {
-      if (sid !== undefined && sid !== discoveryStreamId) return;
-      setDiscoveryStream((prev) => prev + chunk);
-    });
-    const unsubEnd = window.clippi.onAnalysisStreamEnd((sid?: string) => {
-      if (sid !== undefined && sid !== discoveryStreamId) return;
-      setIsDiscovering(false);
-    });
-
-    try {
-      const result = await window.clippi.analyzeDiscovery(discoveryStreamId);
-      setDiscovery(result);
-      setDiscoveryStream("");
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error("Discovery failed:", err);
-      if (msg.includes("minimum 5 games")) {
-        setDiscoveryError("Deep Discovery requires at least 5 imported games. Import more replays and try again.");
-      } else {
-        setDiscoveryError(msg);
-      }
-    } finally {
-      unsubStream();
-      unsubEnd();
-      setIsDiscovering(false);
-    }
-  };
+    refetchHighlights();
+  }, [refreshKey, refetch, refetchRecord, refetchHighlights]);
 
   if (loading) {
     return (
@@ -340,210 +357,197 @@ export function Dashboard({ refreshKey }: { refreshKey: number }) {
     );
   }
 
+  const wins = record?.wins ?? 0;
+  const losses = record?.losses ?? 0;
+  const avgNeutral = useMemo(() => games.reduce((s, g) => s + g.neutralWinRate, 0) / games.length, [games]);
+  const avgLCancel = useMemo(() => games.reduce((s, g) => s + g.lCancelRate, 0) / games.length, [games]);
+  const avgEdgeguard = useMemo(() => games.reduce((s, g) => s + g.edgeguardSuccessRate, 0) / games.length, [games]);
+  const recordColor = wins > losses ? "var(--green)" : wins < losses ? "var(--red)" : "var(--text)";
+
+  const trends = highlights?.trends;
+
   return (
     <div>
+      {/* Page Header */}
       <motion.div
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
       >
         <div className="page-header">
-          <h1>Coaching</h1>
-          <p>Select a game for AI coaching analysis</p>
+          <h1>Dashboard</h1>
+          <p>
+            {record?.totalGames ?? games.length} games played
+            {highlights?.streak
+              ? highlights.streak > 0
+                ? ` \u00B7 ${highlights.streak} game win streak`
+                : ` \u00B7 ${Math.abs(highlights.streak)} game losing streak`
+              : ""
+            }
+          </p>
         </div>
       </motion.div>
 
-      <SessionPulse games={games} record={record} />
+      {/* Stat Pulse with Trend Arrows */}
+      <div className="session-pulse">
+        <PulseStat
+          value={`${wins}W-${losses}L`}
+          label="Record"
+          color={recordColor}
+          index={0}
+          tip="Overall win/loss record across all games"
+        />
+        <PulseStat
+          value={`${(avgNeutral * 100).toFixed(1)}%`}
+          label="Neutral WR"
+          color={statColor(avgNeutral, 0.5)}
+          index={1}
+          tip="How often you win the neutral game — first hit in an exchange"
+          delta={trends?.neutralWinRate}
+        />
+        <PulseStat
+          value={`${(avgLCancel * 100).toFixed(1)}%`}
+          label="L-Cancel"
+          color={statColor(avgLCancel, 0.85)}
+          index={2}
+          tip="Percentage of aerial landings where you successfully L-cancelled"
+          delta={trends?.lCancelRate}
+        />
+        <PulseStat
+          value={`${(avgEdgeguard * 100).toFixed(1)}%`}
+          label="Edgeguard"
+          color={statColor(avgEdgeguard, 0.6, 0.3)}
+          index={3}
+          tip="Edgeguard success rate — how often your offstage attempts result in a stock"
+          delta={trends?.edgeguardSuccessRate}
+        />
+      </div>
 
-      {/* MAGI Discovery (The Oracle) */}
+      {/* Highlight Cards */}
+      {highlights && (
+        <div className="dash-highlights-grid">
+          {highlights.bestCharacter && (
+            <HighlightCard
+              title="Best Character"
+              value={highlights.bestCharacter.character}
+              sub={`${(highlights.bestCharacter.winRate * 100).toFixed(0)}% WR \u00B7 ${highlights.bestCharacter.games} games`}
+              color="var(--green)"
+              icon={UserIcon}
+              index={0}
+            />
+          )}
+          {highlights.bestMatchup && (
+            <HighlightCard
+              title="Best Matchup"
+              value={`vs ${highlights.bestMatchup.opponentCharacter}`}
+              sub={`${(highlights.bestMatchup.winRate * 100).toFixed(0)}% WR \u00B7 ${highlights.bestMatchup.games} games`}
+              color="var(--green)"
+              icon={TrophyIcon}
+              index={1}
+            />
+          )}
+          {highlights.worstMatchup && (
+            <HighlightCard
+              title="Worst Matchup"
+              value={`vs ${highlights.worstMatchup.opponentCharacter}`}
+              sub={`${(highlights.worstMatchup.winRate * 100).toFixed(0)}% WR \u00B7 ${highlights.worstMatchup.games} games`}
+              color="var(--red)"
+              icon={AlertIcon}
+              index={2}
+            />
+          )}
+          {highlights.bestStage && (
+            <HighlightCard
+              title="Best Stage"
+              value={highlights.bestStage.stage}
+              sub={`${(highlights.bestStage.winRate * 100).toFixed(0)}% WR \u00B7 ${highlights.bestStage.games} games`}
+              color="var(--accent)"
+              icon={MapIcon}
+              index={3}
+            />
+          )}
+        </div>
+      )}
+
+      {/* Recent Trend AI Insight */}
+      <RecentInsight games={games} />
+
+      {/* Recent Highlights */}
+      {recentHighlights.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, duration: 0.4 }}
+          className="card"
+          style={{ padding: "16px" }}
+        >
+          <HighlightCards highlights={recentHighlights} maxVisible={5} />
+        </motion.div>
+      )}
+
+      {/* Recent Games — Compact List */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1, duration: 0.5 }}
-        className="discovery-section"
+        transition={{ delay: 0.35, duration: 0.4 }}
       >
-        <div className="card discovery-card">
-          <div className="discovery-header">
-            <div className="discovery-title-row">
-              <div className="discovery-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" fill="rgba(var(--accent-rgb), 0.15)" stroke="currentColor"/>
-                </svg>
-              </div>
-              <div>
-                <h2 className="discovery-heading">Deep Discovery</h2>
-                <p className="discovery-desc">
-                  MAGI is mining your entire career for hidden mathematical truths and non-obvious win conditions.
-                </p>
-              </div>
-            </div>
-            {!discovery && !isDiscovering && (
-              <button className="btn btn-primary discovery-btn" onClick={handleRunDiscovery}>
-                Synthesize Career Narrative
-              </button>
-            )}
+        <div className="dash-recent-header">
+          <h2 className="dash-section-title">Recent Games</h2>
+        </div>
+        <div className="card dash-game-list">
+          <div className="dash-game-header">
+            <span />
+            <span />
+            <span>Matchup</span>
+            <span>Opponent</span>
+            <span>Stage</span>
+            <Tooltip text="Neutral win rate — first hit in an exchange. Above 50% = winning neutral." position="bottom"><span className="dash-col-right">Neut</span></Tooltip>
+            <Tooltip text="L-cancel success rate. Target: above 90% for consistent tech skill." position="bottom"><span className="dash-col-right">L-C</span></Tooltip>
+            <Tooltip text="Edgeguard rate — how often offstage attempts result in a kill." position="bottom"><span className="dash-col-right">Edge</span></Tooltip>
+            <span className="dash-col-right">Date</span>
           </div>
-
-          {discoveryError && (
-            <div className="discovery-error">
-              {discoveryError}
+          {(showAll ? games : games.slice(0, INITIAL_COUNT)).map((game, index) => (
+            <CompactGameRow
+              key={game.id}
+              game={game}
+              index={index}
+              onClick={() => setCoaching({
+                id: game.id,
+                title: `${game.playerCharacter} vs ${game.opponentCharacter} — ${game.stage}`,
+                replayPath: game.replayPath,
+              })}
+            />
+          ))}
+          {!showAll && games.length > INITIAL_COUNT && (
+            <div className="dash-show-more">
+              <button className="btn" onClick={() => setShowAll(true)}>
+                Show All ({games.length} games)
+              </button>
             </div>
           )}
-
-          {(isDiscovering || discovery || discoveryStream) && (
-            <div className="discovery-body">
-              {isDiscovering && !discoveryStream && (
-                <div className="analyze-loading">
-                  <div className="spinner" />
-                  <span>Running correlation matrix and situational anomaly filters...</span>
-                </div>
-              )}
-              <div className="analysis-text discovery-analysis-text">
-                <Markdown>{discovery || discoveryStream}</Markdown>
-                {isDiscovering && <span className="streaming-cursor" />}
-              </div>
-              {discovery && !isDiscovering && (
-                <button className="btn discovery-refresh-btn" onClick={handleRunDiscovery}>Refresh Discovery</button>
-              )}
+          {showAll && games.length > INITIAL_COUNT && (
+            <div className="dash-show-more">
+              <button className="btn" onClick={() => setShowAll(false)}>
+                Show Less
+              </button>
             </div>
           )}
-          
-          <div className="discovery-watermark">MAGI</div>
         </div>
       </motion.div>
 
-      <div className="game-list">
-        {games.map((game, index) => {
-          const isExpanded = expandedGame === game.id;
-          const isAnalyzing = analyzingGame === game.id;
-          const cached = analysisCache[game.id];
-
-          return (
-            <motion.div
-              key={game.id}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: Math.min(index * 0.02, 0.12), duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            >
-              <div className={`game-card ${isExpanded ? "expanded" : ""} ${game.result === "win" ? "game-card-win" : "game-card-loss"}`}>
-                <div className="game-card-header" role="button" tabIndex={0} onClick={() => handleGameClick(game)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleGameClick(game); } }}>
-                  <div className="game-card-result">
-                    <span className={game.result === "win" ? "result-badge win" : "result-badge loss"}>
-                      {game.result === "win" ? "W" : "L"}
-                    </span>
-                    <span className="stock-count">{game.playerFinalStocks}-{game.opponentFinalStocks}</span>
-                  </div>
-                  <div className="game-card-matchup">
-                    <div className="game-card-chars">
-                      {game.playerCharacter} vs {game.opponentCharacter}
-                    </div>
-                    <div className="game-card-opponent">
-                      vs {game.opponentTag}
-                    </div>
-                  </div>
-                  <div className="game-card-details">
-                    <span className="game-card-stage">{game.stage}</span>
-                    <span className="game-card-date">
-                      {formatGameDate(game.playedAt)}
-                    </span>
-                  </div>
-                  <div className="game-card-stats">
-                    <div className="mini-stat">
-                      <span className="mini-stat-value" style={{ color: statColor(game.neutralWinRate, 0.5) }}>
-                        {(game.neutralWinRate * 100).toFixed(0)}%
-                      </span>
-                      <Tooltip text="Neutral win rate — how often you won the first hit in an exchange" position="top">
-                        <span className="mini-stat-label">Neutral</span>
-                      </Tooltip>
-                    </div>
-                    <div className="mini-stat">
-                      <span className="mini-stat-value" style={{ color: statColorInverse(game.openingsPerKill, 4, 7) }}>
-                        {Number.isFinite(game.openingsPerKill) ? game.openingsPerKill.toFixed(1) : "\u2014"}
-                      </span>
-                      <Tooltip text="Openings per kill — how many neutral wins it takes to get a stock. Lower is better (fewer openings needed)." position="top">
-                        <span className="mini-stat-label">Op/Kill</span>
-                      </Tooltip>
-                    </div>
-                    <div className="mini-stat">
-                      <span className="mini-stat-value" style={{ color: statColor(game.lCancelRate, 0.85, 0.7) }}>
-                        {(game.lCancelRate * 100).toFixed(0)}%
-                      </span>
-                      <Tooltip text="L-cancel success rate — percentage of aerials landing with a successful L-cancel input" position="top">
-                        <span className="mini-stat-label">L-Cancel</span>
-                      </Tooltip>
-                    </div>
-                    <div className="mini-stat">
-                      <span className="mini-stat-value" style={{ color: statColor(game.edgeguardSuccessRate, 0.6, 0.3) }}>
-                        {(game.edgeguardSuccessRate * 100).toFixed(0)}%
-                      </span>
-                      <Tooltip text="Edgeguard success rate — how often your offstage attempts result in a stock taken" position="top">
-                        <span className="mini-stat-label">Edgeguard</span>
-                      </Tooltip>
-                    </div>
-                  </div>
-                  <div className="game-card-chevron">
-                    <motion.span
-                      className="game-card-chevron-icon"
-                      animate={{ rotate: isExpanded ? 180 : 0 }}
-                      transition={{ duration: 0.25 }}
-                    >
-                      {"\u25BC"}
-                    </motion.span>
-                  </div>
-                </div>
-
-                <AnimatePresence>
-                  {isExpanded && (
-                    <motion.div
-                      className="game-card-analysis"
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                    >
-                      <div className="game-card-controls">
-                        <button
-                          className="btn game-card-watch-btn"
-                          onClick={(e) => handleWatchReplay(e, game)}
-                          disabled={launchingDolphin === game.id}
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <polygon points="5 3 19 12 5 21 5 3" />
-                          </svg>
-                          {launchingDolphin === game.id ? "Launching..." : "Watch Replay"}
-                        </button>
-                        {dolphinError && expandedGame === game.id && (
-                          <span className="game-card-error">{dolphinError}</span>
-                        )}
-                      </div>
-                      <StockTimeline
-                        replayPath={game.replayPath}
-                        playerCharacter={game.playerCharacter}
-                        opponentCharacter={game.opponentCharacter}
-                      />
-                      {analyzingGame === game.id && !isStreaming && !streamingText && !cached && (
-                        <div className="analyze-loading">
-                          <div className="spinner" />
-                          <span>{queueStatus && queueStatus.pending > 0 ? `Queued (position ${queueStatus.pending})...` : "Starting analysis..."}</span>
-                        </div>
-                      )}
-                      {analyzingGame === game.id && (isStreaming || streamingText) && !cached && (
-                        <GameAnalysisText replayPath={game.replayPath} text={streamingText} isStreaming={isStreaming} />
-                      )}
-                      {analyzeError && expandedGame === game.id && !cached && !streamingText && (
-                        <p className="game-card-error">{analyzeError}</p>
-                      )}
-                      {cached && (
-                        <GameAnalysisText replayPath={game.replayPath} text={cached} showTimestampHint />
-                      )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </motion.div>
-          );
-        })}
-      </div>
+      {/* Game Analysis Modal */}
+      <AnimatePresence>
+        {coaching && (
+          <CoachingModal
+            isOpen
+            onClose={() => setCoaching(null)}
+            scope="game"
+            id={coaching.id}
+            title={coaching.title}
+            replayPath={coaching.replayPath}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -67,11 +67,12 @@ export function saveConfig(config: Partial<Config>): Config {
   }
 }
 
-/** Resolve target player: CLI arg > config > null */
+/** Resolve target player: CLI arg > config > null.
+ *  Uses || (not ??) so empty strings fall through correctly. */
 export function resolveTarget(cliTarget: string | null): string | null {
   if (cliTarget) return cliTarget;
   const config = loadConfig();
-  return config.connectCode ?? config.targetPlayer;
+  return config.connectCode || config.targetPlayer || null;
 }
 
 /** Resolve replay folder: CLI arg > config > null */

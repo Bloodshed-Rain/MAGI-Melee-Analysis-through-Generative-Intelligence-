@@ -3,6 +3,7 @@ import { Routes, Route, useNavigate, useLocation, Navigate } from "react-router-
 import { motion, AnimatePresence } from "framer-motion";
 import { Dashboard } from "./pages/Dashboard";
 import { Sessions } from "./pages/Sessions";
+import { History } from "./pages/History";
 import { Trends } from "./pages/Trends";
 import { Profile } from "./pages/Profile";
 import { Settings } from "./pages/Settings";
@@ -11,16 +12,17 @@ import { applyTheme, getResolvedTheme, type ColorMode } from "./themes";
 import magiController from "./assets/magi-controller.png";
 import magiSword from "./assets/magi-sword.png";
 import {
-  CoachingIcon, SessionsIcon, TrendsIcon, ProfileIcon, CharactersIcon, SettingsIcon,
+  CoachingIcon, SessionsIcon, HistoryIcon, TrendsIcon, ProfileIcon, CharactersIcon, SettingsIcon,
 } from "./components/NavIcons";
 import { CommandPalette } from "./components/CommandPalette";
 import { useGlobalStore } from "./stores/useGlobalStore";
 
-type Page = "dashboard" | "sessions" | "trends" | "profile" | "characters" | "settings";
+type Page = "dashboard" | "sessions" | "history" | "trends" | "profile" | "characters" | "settings";
 
 const NAV_ITEMS: { id: Page; label: string; path: string; Icon: React.FC<{ size?: number }> }[] = [
-  { id: "dashboard", label: "Coaching", path: "/dashboard", Icon: CoachingIcon },
+  { id: "dashboard", label: "Dashboard", path: "/dashboard", Icon: CoachingIcon },
   { id: "sessions", label: "Sessions", path: "/sessions", Icon: SessionsIcon },
+  { id: "history", label: "History", path: "/history", Icon: HistoryIcon },
   { id: "trends", label: "Trends", path: "/trends", Icon: TrendsIcon },
   { id: "profile", label: "Profile", path: "/profile", Icon: ProfileIcon },
   { id: "characters", label: "Characters", path: "/characters", Icon: CharactersIcon },
@@ -84,7 +86,7 @@ export function App() {
                 aria-current={isActive ? "page" : undefined}
                 aria-label={item.label}
               >
-                <span className="nav-icon"><item.Icon size={18} /></span>
+                <span className="nav-icon"><item.Icon size={50} /></span>
                 <span className="nav-label">{item.label}</span>
               </button>
             );
@@ -108,6 +110,7 @@ export function App() {
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<Dashboard refreshKey={refreshKey} />} />
               <Route path="/sessions" element={<Sessions refreshKey={refreshKey} />} />
+              <Route path="/history" element={<History refreshKey={refreshKey} />} />
               <Route path="/trends" element={<Trends refreshKey={refreshKey} />} />
               <Route path="/profile" element={<Profile refreshKey={refreshKey} />} />
               <Route path="/characters" element={<Characters refreshKey={refreshKey} />} />

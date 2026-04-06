@@ -47,6 +47,11 @@ const api = {
   getCharacterSignatureStats: (character: string) => ipcRenderer.invoke("stats:characterSignature", character),
   getCharacterGameStats: (character: string) => ipcRenderer.invoke("stats:characterGameStats", character),
   getOpponentDetail: (opponentKey: string) => ipcRenderer.invoke("stats:opponentDetail", opponentKey),
+  getDashboardHighlights: () => ipcRenderer.invoke("stats:dashboardHighlights"),
+  getGameHighlights: (gameId: number) => ipcRenderer.invoke("stats:gameHighlights", gameId),
+  getRecentHighlights: (limit: number) => ipcRenderer.invoke("stats:recentHighlights", limit),
+  getAnalysisHistory: (limit: number, offset: number, scopeFilter?: string) =>
+    ipcRenderer.invoke("stats:analysisHistory", limit, offset, scopeFilter),
 
   // Stock timeline
   getStockTimeline: (replayPath: string) =>

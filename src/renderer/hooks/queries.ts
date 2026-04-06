@@ -118,3 +118,36 @@ export const useGetLatestAnalysis = () => {
     gcTime: GC_10MIN,
   });
 };
+
+export const useDashboardHighlights = () => {
+  return useQuery({
+    queryKey: ["dashboardHighlights"],
+    queryFn: () => window.clippi.getDashboardHighlights(),
+    gcTime: GC_10MIN,
+  });
+};
+
+export const useGameHighlights = (gameId: number | null) => {
+  return useQuery({
+    queryKey: ["gameHighlights", gameId],
+    queryFn: () => window.clippi.getGameHighlights(gameId!),
+    enabled: gameId != null,
+    gcTime: GC_10MIN,
+  });
+};
+
+export const useRecentHighlights = (limit: number = 20) => {
+  return useQuery({
+    queryKey: ["recentHighlights", limit],
+    queryFn: () => window.clippi.getRecentHighlights(limit),
+    gcTime: GC_10MIN,
+  });
+};
+
+export const useAnalysisHistory = (limit: number, offset: number, scopeFilter?: string) => {
+  return useQuery({
+    queryKey: ["analysisHistory", limit, offset, scopeFilter],
+    queryFn: () => window.clippi.getAnalysisHistory(limit, offset, scopeFilter),
+    gcTime: GC_10MIN,
+  });
+};

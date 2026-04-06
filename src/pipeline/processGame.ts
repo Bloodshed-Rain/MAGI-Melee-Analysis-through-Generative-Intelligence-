@@ -4,16 +4,18 @@ import {
   Frames,
 } from "@slippi/slippi-js/node";
 
-import type { GameSummary, DerivedInsights } from "./types.js";
+import type { GameSummary, DerivedInsights, GameHighlight } from "./types.js";
 import { getPlayerTag, framesToSeconds, endMethodString } from "./helpers.js";
 import { buildPlayerSummary } from "./playerSummary.js";
 import { buildDerivedInsights } from "./derivedInsights.js";
+import { detectHighlights } from "./highlights.js";
 
 // ── Main ──────────────────────────────────────────────────────────────
 
 export function processGame(filePath: string, gameNumber: number): {
   gameSummary: GameSummary;
   derivedInsights: [DerivedInsights, DerivedInsights];
+  highlights: [GameHighlight[], GameHighlight[]];
   startAt: string | null;
 } {
   let game: SlippiGame;
@@ -167,9 +169,29 @@ export function processGame(filePath: string, gameNumber: number): {
     stageId,
   );
 
+  const p0Highlights = detectHighlights(
+    gameSummary,
+    stats.conversions,
+    frames,
+    stageId,
+    0,
+    p0Index,
+    p1Index,
+  );
+  const p1Highlights = detectHighlights(
+    gameSummary,
+    stats.conversions,
+    frames,
+    stageId,
+    1,
+    p1Index,
+    p0Index,
+  );
+
   return {
     gameSummary,
     derivedInsights: [p0Insights, p1Insights],
+    highlights: [p0Highlights, p1Highlights],
     startAt,
   };
 }

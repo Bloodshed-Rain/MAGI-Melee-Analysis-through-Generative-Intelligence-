@@ -1,32 +1,41 @@
 import { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import ReactMarkdown from "react-markdown";
+import { motion } from "framer-motion";
+import { CoachingCards } from "./CoachingCards";
+import {
+  makeTimestampComponents,
+  injectTimestampLinks,
+} from "../utils/timestampLinks";
 
 interface CoachingModalProps {
   isOpen: boolean;
   onClose: () => void;
-  scope: "game" | "session" | "character" | "stage" | "opponent";
+  scope: "game" | "session" | "character" | "stage" | "opponent" | "career";
   id: string | number;
   title: string;
+  /** Pre-loaded analysis text (skips LLM call when provided) */
+  preloadedText?: string;
+  /** Replay path for timestamp click-to-Dolphin support */
+  replayPath?: string;
 }
 
-export function CoachingModal({ isOpen, onClose, scope, id, title }: CoachingModalProps) {
-  const [analysis, setAnalysis] = useState("");
+export function CoachingModal({ isOpen, onClose, scope, id, title, preloadedText, replayPath }: CoachingModalProps) {
+  const [analysis, setAnalysis] = useState(preloadedText ?? "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [queuePos, setQueuePos] = useState<number>(0);
+  const [dolphinLoading, setDolphinLoading] = useState(false);
+  const [dolphinError, setDolphinError] = useState<string | null>(null);
 
   const runAnalysis = useCallback(async () => {
+    if (preloadedText) return;
     setLoading(true);
     setAnalysis("");
     setError(null);
     setQueuePos(0);
 
     try {
-      // Get initial queue status for progress feedback
       window.clippi.getQueueStatus().then(s => setQueuePos(s.pending)).catch(() => {});
 
-      // Setup listener for streaming (scoped by streamId to prevent cross-listener collision)
       const streamId = crypto.randomUUID();
       const removeListener = window.clippi.onAnalysisStream((chunk, sid) => {
         if (sid !== undefined && sid !== streamId) return;
@@ -39,19 +48,21 @@ export function CoachingModal({ isOpen, onClose, scope, id, title }: CoachingMod
         setLoading(false);
       });
 
-      const result = await window.clippi.analyzeScoped(scope, id, undefined, streamId);
-      if (result) {
-        setAnalysis(result);
-        setLoading(false);
+      try {
+        const result = await window.clippi.analyzeScoped(scope, id, undefined, streamId);
+        if (result) {
+          setAnalysis(result);
+          setLoading(false);
+        }
+      } finally {
+        removeListener();
+        removeEndListener();
       }
-
-      removeListener();
-      removeEndListener();
     } catch (err: any) {
       setError(err.message || String(err));
       setLoading(false);
     }
-  }, [scope, id]);
+  }, [scope, id, preloadedText]);
 
   useEffect(() => {
     if (isOpen && !analysis && !loading) {
@@ -62,13 +73,14 @@ export function CoachingModal({ isOpen, onClose, scope, id, title }: CoachingMod
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay" onClick={onClose} style={{ zIndex: 2000 }}>
+    <div className="modal-overlay" onClick={onClose}>
       <motion.div
-        className="modal-content coaching-modal"
+        className="coaching-modal"
         onClick={e => e.stopPropagation()}
-        initial={{ opacity: 0, scale: 0.9, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+        initial={{ x: "100%" }}
+        animate={{ x: 0 }}
+        exit={{ x: "100%" }}
+        transition={{ type: "spring", damping: 30, stiffness: 300 }}
       >
         <header className="coaching-header">
           <div className="coaching-title-row">
@@ -101,162 +113,44 @@ export function CoachingModal({ isOpen, onClose, scope, id, title }: CoachingMod
             </div>
           )}
 
-          <div className="prose">
-            <ReactMarkdown>{analysis}</ReactMarkdown>
-            {loading && analysis && <span className="cursor-blink">_</span>}
-          </div>
+          <CoachingCards
+            text={replayPath ? injectTimestampLinks(analysis) : analysis}
+            isStreaming={loading && !!analysis}
+            markdownComponents={replayPath ? makeTimestampComponents(replayPath) : undefined}
+          />
         </div>
 
         <footer className="coaching-footer">
           <p className="coaching-disclaimer">
             AI analysis may occasionally hallucinate frame-perfect tech.
           </p>
-          <button className="btn" onClick={onClose}>Close</button>
+          <div className="coaching-footer-actions">
+            {replayPath && (
+              <button
+                className="btn game-card-watch-btn"
+                disabled={dolphinLoading}
+                onClick={async () => {
+                  setDolphinError(null);
+                  setDolphinLoading(true);
+                  try {
+                    await window.clippi.openInDolphin(replayPath);
+                  } catch (err: unknown) {
+                    setDolphinError(err instanceof Error ? err.message : String(err));
+                  }
+                  setDolphinLoading(false);
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="5 3 19 12 5 21 5 3" />
+                </svg>
+                {dolphinLoading ? "Launching..." : "Watch Replay"}
+              </button>
+            )}
+            {dolphinError && <span className="game-card-error">{dolphinError}</span>}
+            <button className="btn" onClick={onClose}>Close</button>
+          </div>
         </footer>
       </motion.div>
-
-      <style>{`
-        .modal-overlay {
-          position: fixed;
-          inset: 0;
-          background: rgba(0, 0, 0, 0.6);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          backdrop-filter: blur(4px);
-        }
-        .coaching-modal {
-          width: min(800px, 95vw);
-          height: 80vh;
-          display: flex;
-          flex-direction: column;
-          background: var(--surface);
-          border: 1px solid var(--border);
-          border-radius: var(--radius-md, 8px);
-        }
-        .coaching-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 16px 20px;
-          border-bottom: 1px solid var(--border);
-        }
-        .coaching-title-row {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
-        .coaching-icon {
-          width: 36px;
-          height: 36px;
-          background: rgba(var(--accent-rgb), 0.1);
-          border-radius: 8px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: var(--accent);
-          flex-shrink: 0;
-        }
-        .coaching-heading {
-          font-size: 1.1rem;
-          font-weight: 700;
-          margin: 0;
-          color: var(--text);
-        }
-        .coaching-subtitle {
-          font-size: 0.75rem;
-          color: var(--text-secondary);
-          margin: 2px 0 0;
-        }
-        .coaching-close {
-          background: none;
-          border: none;
-          color: var(--text-secondary);
-          font-size: 1.5rem;
-          cursor: pointer;
-          padding: 4px 8px;
-          line-height: 1;
-        }
-        .coaching-close:hover { color: var(--text); }
-        .coaching-body {
-          flex: 1;
-          overflow-y: auto;
-          padding: 20px;
-        }
-        .coaching-error {
-          padding: 12px 16px;
-          border-radius: var(--radius-xs, 4px);
-          background: rgba(239, 68, 68, 0.1);
-          border: 1px solid rgba(239, 68, 68, 0.2);
-          color: #f87171;
-          font-size: 0.875rem;
-          margin-bottom: 16px;
-        }
-        .coaching-loading {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          padding: 80px 0;
-          gap: 16px;
-        }
-        .coaching-loading-text {
-          font-size: 0.875rem;
-          color: var(--text-secondary);
-          animation: pulse 2s ease-in-out infinite;
-        }
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
-        }
-        .coaching-footer {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 12px 20px;
-          border-top: 1px solid var(--border);
-        }
-        .coaching-disclaimer {
-          font-size: 10px;
-          color: var(--text-secondary);
-          font-style: italic;
-          margin: 0;
-        }
-        .cursor-blink {
-          display: inline-block;
-          width: 8px;
-          height: 1.2em;
-          background: var(--accent);
-          margin-left: 4px;
-          animation: blink 1s step-end infinite;
-          vertical-align: middle;
-        }
-        @keyframes blink {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0; }
-        }
-        .prose h1, .prose h2, .prose h3 {
-          color: var(--accent);
-          margin-top: 1.5em;
-          margin-bottom: 0.5em;
-          font-family: var(--font-display);
-        }
-        .prose p {
-          margin-bottom: 1em;
-          line-height: 1.6;
-          color: var(--text-secondary);
-        }
-        .prose ul, .prose ol {
-          margin-bottom: 1em;
-          padding-left: 1.5em;
-        }
-        .prose li {
-          margin-bottom: 0.5em;
-        }
-        .prose strong {
-          color: var(--text);
-        }
-      `}</style>
     </div>
   );
 }

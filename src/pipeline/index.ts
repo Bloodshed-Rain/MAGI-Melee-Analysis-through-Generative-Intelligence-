@@ -4,7 +4,8 @@
 export { processGame } from "./processGame.js";
 export { buildDerivedInsights } from "./derivedInsights.js";
 export { computeAdaptationSignals, findPlayerIdx } from "./adaptation.js";
-export { 
+export { detectHighlights } from "./highlights.js";
+export {
   assembleUserPrompt, assemblePlayerContext, SYSTEM_PROMPT,
   assembleAggregatePrompt, SYSTEM_PROMPT_AGGREGATE,
   assembleDiscoveryPrompt, SYSTEM_PROMPT_DISCOVERY
@@ -16,6 +17,7 @@ export type {
   DerivedInsights,
   HabitProfile,
   GameResult,
+  GameHighlight,
   KenComboStats,
   TurnipPullStats,
   CharacterSignatureStats,

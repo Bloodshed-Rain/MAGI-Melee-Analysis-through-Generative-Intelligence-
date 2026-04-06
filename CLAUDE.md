@@ -22,7 +22,7 @@ MAGI (Melee Analysis through Generative Intelligence) is an Electron + React des
 
 Three processes communicate via IPC:
 
-- **Main** (`src/main/index.ts`): Electron main process. IPC handlers split into `src/main/handlers/` (llm, stats, dolphin, config, import, analysis, dialog, watcher, stockTimeline). Shared state in `src/main/state.ts`.
+- **Main** (`src/main/index.ts`): Electron main process. IPC handlers split into `src/main/handlers/` (analysis, stats, llm, config, import, watcher, dolphin, dialog, stockTimeline). Shared state in `src/main/state.ts`.
 - **Preload** (`src/preload/index.ts`): Bridges main↔renderer via `contextBridge`. Exposes `window.clippi` with typed IPC invoke wrappers.
 - **Renderer** (`src/renderer/`): React SPA built with Vite. Pages in `src/renderer/pages/`, components in `src/renderer/components/`. Uses `react-router-dom` for routing.
 
@@ -30,19 +30,21 @@ Three processes communicate via IPC:
 
 `src/pipeline/` is the core analysis engine (barrel-exported via `index.ts`):
 - `types.ts`: All interfaces (`GameSummary`, `PlayerSummary`, `DerivedInsights`, signature stats)
-- `helpers.ts`: Shared utilities (frame conversion, action state classifiers, stage bounds)
-- `processGame.ts`: Main orchestrator — parses .slp via `SlippiGame`
+- `helpers.ts`: Shared utilities (frame conversion, action state classifiers, stage bounds, move ID mapping)
+- `processGame.ts`: Main orchestrator — parses .slp via `SlippiGame`, returns `GameResult`
 - `playerSummary.ts`: Builds per-player stats (neutral, conversions, movement, recovery, edgeguards)
 - `signatureStats.ts`: Character-specific stat detection (26 characters)
 - `derivedInsights.ts`: Habit profiles, key moments, performance by stock
 - `adaptation.ts`: Cross-game adaptation signals for multi-game sets
-- `prompt.ts`: `SYSTEM_PROMPT` + `assembleUserPrompt` for LLM coaching
+- `highlights.ts`: Detects notable moments (zero-to-deaths, spike kills, high-damage, 4-stocks, JV5/JV4)
+- `characterData.ts`: Character metadata
+- `prompt.ts`: `SYSTEM_PROMPT`, `SYSTEM_PROMPT_AGGREGATE`, `SYSTEM_PROMPT_DISCOVERY` + `assembleUserPrompt`, `assembleAggregatePrompt`, `assembleDiscoveryPrompt`, `assemblePlayerContext`
 
 ### Supporting Modules
 
 - `src/llm.ts`: Multi-provider LLM abstraction (OpenRouter, Gemini, Anthropic, OpenAI, local). All share: system prompt + user prompt → text.
 - `src/llmQueue.ts`: Queued LLM calls to prevent concurrent overload
-- `src/db.ts`: SQLite via better-sqlite3. Data dir: `~/.magi-melee/`, DB file: `magi.db`. Tables: `player_profile`, `sessions`, `games`, `game_stats`, `coaching_analyses`, `practice_plans`, `character_signature_stats`, `schema_version`.
+- `src/db.ts`: SQLite via better-sqlite3. Data dir: `~/.magi-melee/`, DB file: `magi.db`. Tables: `player_profile`, `sessions`, `games`, `game_stats`, `coaching_analyses`, `practice_plans`, `character_signature_stats`, `highlights`, `schema_version`. 5 migrations adding: power_shield_count, edgeguard stats, shield pressure + DI columns, coaching scope fields, highlights table.
 - `src/config.ts`: JSON config at `~/.magi-melee/config.json`. Stores target player, API keys, replay folder, theme.
 - `src/importer.ts`: Bulk imports replay folders, hashes files for dedup, inserts into DB, optionally triggers LLM analysis.
 - `src/replayAnalyzer.ts`: Single-replay analysis with DB caching (hash-based dedup, skips LLM if cached).
@@ -55,7 +57,17 @@ Three processes communicate via IPC:
 
 ### Renderer Pages
 
-Dashboard, Sessions, Characters, Trends, Profile, Settings — each in `src/renderer/pages/`.
+Dashboard, Sessions, History, Trends, Characters, Profile, Settings — each in `src/renderer/pages/`.
+
+Key components in `src/renderer/components/`:
+- `CoachingCards.tsx`: Parsed markdown coaching display with collapsible sections, section icons, timestamp links
+- `CoachingModal.tsx`: Full-page coaching modal with LLM streaming, scope info
+- `HighlightCards.tsx`: Highlight moment display with type-based color coding
+- `RadarChart.tsx`: 6-axis player radar (neutral, conversion, L-cancel, recovery, edgeguard, DI)
+- `CommandPalette.tsx`: Ctrl+K quick navigation and import
+- `StockTimeline.tsx`: Visual stock progression timeline
+- `Onboarding.tsx`: First-time setup flow
+- `ErrorBoundary.tsx`, `Tooltip.tsx`, `NavIcons.tsx`, `ThemeIcons.tsx`
 
 ## TypeScript Configuration
 

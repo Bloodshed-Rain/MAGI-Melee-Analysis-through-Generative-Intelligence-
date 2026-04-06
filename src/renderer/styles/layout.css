@@ -21,27 +21,27 @@
   -webkit-app-region: drag;
   z-index: 10;
   flex-shrink: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 /* ── Sidebar Sword (vertical background emblem) ──────────────── */
 
 .sidebar-sword {
   position: absolute;
-  left: 65%;
-  top: 70%;
-  transform: translate(-50%, -50%) rotate(-90deg);
-  width: 75vh;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  width: 36px;
   height: auto;
-  opacity: 0.18;
-  filter: grayscale(0.5);
+  opacity: 0.08;
+  filter: grayscale(0.7);
   pointer-events: none;
   z-index: 0;
   transition: opacity 0.4s ease, filter 0.4s ease;
 }
 .sidebar:hover .sidebar-sword {
-  opacity: 0.14;
-  filter: grayscale(0.2);
+  opacity: 0.12;
+  filter: grayscale(0.4);
 }
 
 /* ── Navigation — icon-only, 44x44 squares ───────────────────── */
@@ -61,8 +61,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   padding: 0;
   border: none;
   border-radius: var(--radius-md);
@@ -73,7 +73,7 @@
   font-weight: 500;
   font-family: var(--font-sans);
   transition: color 0.15s ease, background-color 0.15s ease;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .nav-item:hover {
@@ -108,32 +108,36 @@
 
 .nav-label {
   position: absolute;
-  left: calc(100% + 12px);
+  left: calc(100% + 10px);
   top: 50%;
   transform: translateY(-50%);
   background: var(--surface-2);
   color: var(--text);
   font-size: 12px;
-  font-weight: 500;
-  padding: 4px 10px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  padding: 6px 12px;
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   white-space: nowrap;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.15s ease;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  transform: translateY(-50%) translateX(-4px);
   box-shadow: var(--shadow-md);
   z-index: 99999;
 }
 
 .nav-item:hover .nav-label {
   opacity: 1;
+  transform: translateY(-50%) translateX(0);
 }
 
 /* ── Nav Icon ────────────────────────────────────────────────── */
 
 .nav-icon {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;

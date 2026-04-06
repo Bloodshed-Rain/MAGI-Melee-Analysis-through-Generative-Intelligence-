@@ -21,6 +21,7 @@ import {
   insertGameStats,
   insertCoachingAnalysis,
   insertSignatureStats,
+  insertHighlights,
   createSession,
   updateSession,
   getPlayerHistory,
@@ -172,6 +173,12 @@ export async function importReplay(
       insertSignatureStats(gameId, JSON.stringify(player.signatureStats));
     }
 
+    // Persist highlights for the target player
+    const playerHighlights = gameResult.highlights[playerIdx];
+    if (playerHighlights && playerHighlights.length > 0) {
+      insertHighlights(gameId, playerHighlights);
+    }
+
     return gameId;
   });
 
@@ -219,6 +226,11 @@ export interface BatchImportResult {
 
 /** Max error details to keep — prevents huge payloads when most files fail */
 const MAX_ERROR_DETAILS = 50;
+
+/** Max game results to keep in memory for LLM analysis after import.
+ *  Older entries have heavy fields (gameSummary, gameResult) evicted
+ *  to prevent OOM on large imports (65K+ replays). */
+const MAX_CACHED_RESULTS = 20;
 
 /** Classify an import error into a user-friendly short message */
 function classifyError(err: unknown): string {
@@ -337,8 +349,9 @@ export async function importReplays(
     const dbBatch = getDb().transaction(() => {
       for (const res of parseResults) {
         if (!res.success) continue;
-        const { item, result } = res;
-        const { gameSummary, derivedInsights, startAt } = result!;
+        const { item } = res;
+        const gameResult = res.result!;
+        const { gameSummary, derivedInsights, startAt } = gameResult;
 
         let targetTag = targetPlayer ?? "";
         if (!targetTag) {
@@ -430,6 +443,12 @@ export async function importReplays(
           insertSignatureStats(gameId, JSON.stringify(player.signatureStats));
         }
 
+        // Persist highlights for the target player
+        const playerHighlights = gameResult.highlights[playerIdx];
+        if (playerHighlights && playerHighlights.length > 0) {
+          insertHighlights(gameId, playerHighlights);
+        }
+
         if (startAt) {
           if (!earliestGameTime || startAt < earliestGameTime) earliestGameTime = startAt;
           if (!latestGameTime || startAt > latestGameTime) latestGameTime = startAt;
@@ -446,6 +465,7 @@ export async function importReplays(
             ...finalResults[idx],
             gameId,
             gameSummary,
+            gameResult,
           };
         }
       }
@@ -485,6 +505,19 @@ export async function importReplays(
         });
       }
     }
+    // Evict heavy fields from older entries to bound memory on large imports.
+    // Only the most recent MAX_CACHED_RESULTS entries keep gameSummary/gameResult.
+    const evictBefore = finalResults.length - MAX_CACHED_RESULTS;
+    if (evictBefore > 0) {
+      for (let k = 0; k < evictBefore; k++) {
+        const entry = finalResults[k];
+        if (entry && (entry.gameSummary || entry.gameResult)) {
+          delete entry.gameSummary;
+          delete entry.gameResult;
+        }
+      }
+    }
+
     await yieldToEventLoop();
   }
 
@@ -511,24 +544,15 @@ export async function importAndAnalyze(
     return { batchResult, analysis: null };
   }
 
-  // Parallel re-parse for LLM prompt assembly
+  // Use cached GameResults from import — no re-parsing needed.
+  // Cap at 20 games for LLM prompt (larger sets would exceed context limits).
+  const MAX_LLM_GAMES = 20;
+  const filesToAnalyze = importedFiles.slice(-MAX_LLM_GAMES);
   const gameResults: GameResult[] = [];
-  const REPARSE_BATCH_SIZE = 10;
-  for (let i = 0; i < importedFiles.length; i += REPARSE_BATCH_SIZE) {
-    const chunk = importedFiles.slice(i, i + REPARSE_BATCH_SIZE);
-    const results = await Promise.all(
-      chunk.map(async (file) => {
-        try {
-          return await parsePool.parse(file.filePath, 1);
-        } catch {
-          return null;
-        }
-      })
-    );
-    for (const r of results) {
-      if (r) gameResults.push(r);
+  for (const file of filesToAnalyze) {
+    if (file.gameResult) {
+      gameResults.push(file.gameResult);
     }
-    await yieldToEventLoop();
   }
 
   if (gameResults.length === 0) {

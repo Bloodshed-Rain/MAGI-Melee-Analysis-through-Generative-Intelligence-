@@ -7,6 +7,10 @@
 @import "./layout.css";
 @import "./typography.css";
 @import "./components.css";
+@import "./coaching-cards.css";
+@import "./highlights.css";
+@import "./dashboard.css";
+@import "./history.css";
 @import "./charts.css";
 @import "./animations.css";
 @import "./utilities.css";
