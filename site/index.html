@@ -4,553 +4,493 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
 <title>MAGI — Melee Analysis through Generative Intelligence</title>
-<meta name="description" content="AI-powered Melee coaching from your Slippi replays. The first tool that actually watches you play.">
-<meta name="theme-color" content="#050805">
+<meta name="description" content="Open-source AI coaching for Super Smash Bros. Melee. Drop your replays. Get smarter.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+
 :root{
-  --slippi:#21BA45;
-  --phosphor:#1de84a;
-  --dim:rgba(33,186,69,0.4);
-  --ghost:rgba(33,186,69,0.15);
-  --faint:rgba(33,186,69,0.07);
-  --screen:#050805;
-  --bezel:#1a1a1c;
-  --bezel-hi:#2a2a2e;
-  --room:#030303;
+–g:#21BA45;
+–g2:#2EE85A;
+–g-dim:rgba(33,186,69,0.45);
+–g-lo:rgba(33,186,69,0.12);
+–g-glow:rgba(33,186,69,0.08);
+–amber:#E8A030;
+–red:#D83828;
+–bg:#070A08;
+–bg2:#0B0F0C;
+–chalk:#E0E6E2;
+–chalk-mid:rgba(224,230,226,0.7);
+–chalk-dim:rgba(224,230,226,0.45);
+–border:rgba(224,230,226,0.08);
+–ui:‘Outfit’,sans-serif;
+–serif:‘Instrument Serif’,serif;
 }
-html,body{margin:0;height:100%;background:var(--room);overflow:hidden}
+
+html{
+background:var(–bg)!important;
+scroll-behavior:smooth;
+scrollbar-width:thin;
+scrollbar-color:var(–g-dim) var(–bg);
+}
 body{
-  display:flex;align-items:center;justify-content:center;
-  font-family:'Courier New',Courier,monospace;
-  padding:12px;
+background:var(–bg)!important;
+font-family:var(–ui);
+color:var(–chalk);
+-webkit-font-smoothing:antialiased;
+overflow-x:hidden;
 }
+::selection{background:var(–g);color:var(–bg)}
 
-/* ═══ KEYFRAMES ═══ */
-@keyframes crt-on{
-0%{opacity:0;transform:scaleY(.005) scaleX(.3);filter:brightness(30)}
-20%{opacity:1;transform:scaleY(.005) scaleX(1);filter:brightness(10)}
-40%{transform:scaleY(1.1) scaleX(1);filter:brightness(2)}
-60%{transform:scaleY(.95);filter:brightness(1.2)}
-80%{transform:scaleY(1.02);filter:brightness(1)}
-100%{transform:scaleY(1);filter:brightness(1);opacity:1}
-}
-@keyframes scan-move{
-0%{transform:translateY(-100%)}
-100%{transform:translateY(100%)}
-}
-@keyframes flicker{
-0%,100%{opacity:1}92%{opacity:1}93%{opacity:.82}94%{opacity:1}
-}
-@keyframes glow-pulse{
-0%,100%{box-shadow:0 0 60px rgba(33,186,69,.06),0 0 120px rgba(33,186,69,.03),inset 0 0 60px rgba(33,186,69,.04)}
-50%{box-shadow:0 0 80px rgba(33,186,69,.1),0 0 160px rgba(33,186,69,.05),inset 0 0 80px rgba(33,186,69,.06)}
-}
-@keyframes blink{50%{opacity:0}}
-@keyframes led-pulse{0%,100%{opacity:.6}50%{opacity:1}}
+a{color:inherit;text-decoration:none}
+a:focus-visible{outline:2px solid var(–g);outline-offset:3px}
 
-/* ═══ MONITOR SHELL ═══ */
-.monitor{
-width:100%;max-width:720px;
-background:linear-gradient(170deg,var(–bezel-hi) 0%,var(–bezel) 30%,#111113 100%);
-border-radius:18px;padding:18px 18px 24px;
-position:relative;
-box-shadow:0 30px 80px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.03);
-}
-.monitor-brand{
-text-align:center;font-family:‘Helvetica Neue’,Helvetica,Arial,sans-serif;
-font-size:10px;font-weight:700;letter-spacing:.35em;text-transform:uppercase;
-color:rgba(255,255,255,.08);margin-bottom:10px;user-select:none;
-}
-
-/* ═══ SCREEN ═══ */
-.screen{
-background:var(–screen);border-radius:6px;overflow:hidden;
-position:relative;border:1px solid var(–faint);
-}
-.screen.on{animation:glow-pulse 4s ease-in-out infinite}
-
-/* CRT power-on wrapper */
-.crt-wrap{
-opacity:0;transform-origin:center center;
-}
-.crt-wrap.powered{animation:crt-on .6s cubic-bezier(.23,1,.32,1) forwards}
-
-/* Scanlines */
-.scanlines{
-position:absolute;inset:0;z-index:10;pointer-events:none;
-background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.15) 2px,rgba(0,0,0,.15) 4px);
-}
-/* Moving scan beam */
-.scan-beam{position:absolute;inset:0;z-index:11;pointer-events:none;overflow:hidden}
-.scan-beam::after{
-content:’’;display:block;width:100%;height:8px;
-background:linear-gradient(180deg,transparent,rgba(33,186,69,.07),transparent);
-animation:scan-move 4s linear infinite;
-}
-/* Flicker */
-.flicker{animation:flicker 8s linear infinite}
-
-/* ═══ TAB BAR ═══ */
-.tabs{
-display:flex;border-bottom:1px solid rgba(33,186,69,.1);
-background:rgba(33,186,69,.02);position:relative;z-index:5;
-overflow-x:auto;scrollbar-width:none;
-}
-.tabs::-webkit-scrollbar{display:none}
-.tab{
-flex:0 0 auto;padding:10px 16px;background:transparent;
-border:none;border-bottom:2px solid transparent;
-color:var(–dim);font-family:inherit;font-size:10px;font-weight:700;
-letter-spacing:.2em;cursor:pointer;transition:all .2s;white-space:nowrap;
-}
-.tab:hover{color:rgba(33,186,69,.6)}
-.tab.active{
-background:rgba(33,186,69,.08);border-bottom-color:var(–slippi);
-color:var(–phosphor);text-shadow:0 0 8px var(–slippi);
-}
-.tab.disabled{color:rgba(33,186,69,.15);cursor:default}
-.tab.disabled:hover{color:rgba(33,186,69,.15)}
-.tab-status{
-margin-left:auto;padding:10px 16px;font-size:9px;
-letter-spacing:.15em;color:var(–dim);display:flex;
-align-items:center;gap:12px;white-space:nowrap;
-}
-.status-dot{
-width:5px;height:5px;border-radius:50%;
-background:rgba(33,186,69,.3);display:inline-block;
-margin-right:4px;vertical-align:middle;
-}
-.status-dot.live{background:var(–phosphor);box-shadow:0 0 6px var(–slippi)}
-
-/* ═══ CONTENT AREA ═══ */
-.content{
-height:clamp(300px,52vh,520px);
-overflow-y:auto;overflow-x:hidden;
-padding:24px 20px;font-size:12px;line-height:1.8;
-scrollbar-width:thin;scrollbar-color:var(–dim) transparent;
-white-space:pre-wrap;word-break:break-word;
-}
-.content::-webkit-scrollbar{width:4px}
-.content::-webkit-scrollbar-track{background:transparent}
-.content::-webkit-scrollbar-thumb{background:var(–dim);border-radius:2px}
-
-/* Text styles */
-.t-title{color:var(–phosphor);font-size:16px;font-weight:700;text-shadow:0 0 10px var(–slippi),0 0 30px var(–ghost);letter-spacing:.15em}
-.t-sub{color:var(–dim);font-size:12px;letter-spacing:.05em}
-.t-normal{color:rgba(33,186,69,.7)}
-.t-success{color:var(–phosphor);font-weight:600;text-shadow:0 0 8px var(–slippi)}
-.t-dim{color:var(–dim);font-size:11px}
-.t-body{color:rgba(33,186,69,.75)}
-
-/* Cursor */
-.cursor{
-display:inline-block;width:8px;height:15px;
-background:var(–phosphor);box-shadow:0 0 6px var(–slippi);
-animation:blink 1s step-end infinite;vertical-align:text-bottom;
-}
-
-/* ═══ BOTTOM STATUS BAR ═══ */
-.status-bar{
-display:flex;justify-content:space-between;align-items:center;
-padding:8px 16px;border-top:1px solid rgba(33,186,69,.08);
-font-size:9px;letter-spacing:.1em;
-color:rgba(33,186,69,.25);position:relative;z-index:5;
-flex-wrap:wrap;gap:4px 16px;
-}
-
-/* ═══ MONITOR CHIN ═══ */
-.chin{
+/* ============ NAV ============ */
+nav{
+position:fixed;top:0;left:0;right:0;z-index:100;
+padding:0 2rem;height:56px;
 display:flex;align-items:center;justify-content:space-between;
-padding:14px 8px 0;
-}
-.power-led{
-width:7px;height:7px;border-radius:50%;
-background:rgba(255,255,255,.05);
-transition:all .5s;
-}
-.power-led.on{
-background:var(–slippi);
-box-shadow:0 0 8px var(–slippi),0 0 16px var(–ghost);
-animation:led-pulse 3s ease-in-out infinite;
-}
-.chin-label{
-font-family:‘Helvetica Neue’,Helvetica,Arial,sans-serif;
-font-size:8px;font-weight:700;letter-spacing:.3em;text-transform:uppercase;
-color:rgba(255,255,255,.06);user-select:none;
-}
-.chin-center{
-font-family:‘Helvetica Neue’,Helvetica,Arial,sans-serif;
-font-size:11px;font-weight:900;letter-spacing:.25em;
-color:rgba(255,255,255,.04);text-transform:uppercase;user-select:none;
+background:rgba(7,10,8,0.8);
+backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+border-bottom:1px solid var(–border);
 }
 
-/* ═══ LINKS INSIDE CONTENT ═══ */
-.content a{
-color:var(–phosphor);text-decoration:none;
-text-shadow:0 0 6px var(–ghost);
-border-bottom:1px solid rgba(33,186,69,.2);
-transition:all .2s;
-}
-.content a:hover{
-border-bottom-color:var(–phosphor);
-text-shadow:0 0 10px var(–slippi);
+.nav-brand{
+font-size:0.7rem;font-weight:800;
+letter-spacing:0.3em;text-transform:uppercase;
+color:var(–g);
 }
 
-/* ═══ RESPONSIVE ═══ */
-@media(max-width:480px){
-body{padding:8px;align-items:flex-start;padding-top:max(8px,env(safe-area-inset-top))}
-.monitor{border-radius:12px;padding:12px 10px 16px}
-.tab{padding:10px 12px;font-size:9px;letter-spacing:.12em}
-.tab-status{padding:8px 10px;font-size:8px;gap:8px}
-.content{height:clamp(260px,58vh,480px);padding:18px 14px;font-size:11px}
-.status-bar{padding:6px 12px;font-size:8px}
-.t-title{font-size:13px}
+.nav-links{display:flex;align-items:center;gap:1.8rem}
+.nav-link{
+font-size:0.68rem;font-weight:500;
+color:var(–chalk-mid);
+letter-spacing:0.04em;
+transition:color 0.2s;
+}
+.nav-link:hover{color:var(–chalk)}
+
+.nav-cta{
+font-size:0.62rem;font-weight:700;
+letter-spacing:0.08em;text-transform:uppercase;
+color:var(–bg);background:var(–g);
+padding:0.5rem 1.2rem;border-radius:5px;
+transition:transform 0.1s,box-shadow 0.2s;
+}
+.nav-cta:hover{
+transform:translateY(-1px);
+box-shadow:0 4px 16px rgba(33,186,69,0.25);
+}
+
+/* ============ LAYOUT ============ */
+.container{max-width:900px;margin:0 auto;padding:0 2rem}
+
+/* ============ HERO ============ */
+.hero{
+padding:10rem 0 6rem;
+position:relative;
+}
+
+/* Subtle radial glow behind hero */
+.hero::before{
+content:’’;position:absolute;
+top:20%;left:50%;
+width:600px;height:400px;
+transform:translateX(-50%);
+background:radial-gradient(ellipse,rgba(33,186,69,0.06) 0%,transparent 70%);
+pointer-events:none;
+}
+
+.hero-eyebrow{
+font-size:0.55rem;font-weight:600;
+letter-spacing:0.35em;text-transform:uppercase;
+color:var(–g-dim);
+margin-bottom:1.5rem;
+}
+
+.hero h1{
+font-size:clamp(3.5rem,10vw,7rem);
+font-weight:900;
+letter-spacing:-0.04em;
+line-height:0.9;
+color:var(–chalk);
+}
+
+.hero h1 span{
+display:block;
+font-family:var(–serif);
+font-weight:400;font-style:italic;
+font-size:clamp(1.3rem,3vw,2rem);
+letter-spacing:0.01em;
+color:var(–chalk-mid);
+margin-top:0.6rem;
+line-height:1.4;
+}
+
+.hero-desc{
+font-size:0.92rem;line-height:1.85;
+font-weight:300;color:var(–chalk-mid);
+max-width:50ch;margin-top:2rem;
+}
+
+.hero-actions{
+display:flex;gap:0.8rem;margin-top:2.5rem;
+flex-wrap:wrap;
+}
+
+.btn{
+display:inline-flex;align-items:center;gap:0.5rem;
+font-family:var(–ui);font-size:0.72rem;font-weight:700;
+letter-spacing:0.06em;
+padding:0.85rem 2rem;border-radius:6px;
+cursor:pointer;border:none;
+transition:transform 0.1s,box-shadow 0.2s;
+}
+.btn-primary{
+background:var(–g);color:var(–bg);
+box-shadow:0 2px 10px rgba(33,186,69,0.2);
+}
+.btn-primary:hover{
+transform:translateY(-1px);
+box-shadow:0 4px 20px rgba(33,186,69,0.3);
+}
+.btn-secondary{
+background:transparent;color:var(–chalk-mid);
+border:1px solid var(–border);
+}
+.btn-secondary:hover{
+border-color:rgba(224,230,226,0.2);
+color:var(–chalk);
+}
+
+/* ============ SECTIONS ============ */
+section{padding:6rem 0}
+section + section{border-top:1px solid var(–border)}
+
+.section-label{
+font-size:0.45rem;font-weight:700;
+letter-spacing:0.35em;text-transform:uppercase;
+color:var(–g-dim);margin-bottom:1.5rem;
+}
+
+section h2{
+font-family:var(–serif);
+font-size:clamp(1.8rem,4vw,2.6rem);
+font-weight:400;
+line-height:1.2;
+color:var(–chalk);
+max-width:20ch;
+}
+
+section p{
+font-size:0.88rem;line-height:1.9;
+font-weight:300;color:var(–chalk-mid);
+max-width:55ch;margin-top:1rem;
+}
+
+/* Stats row */
+.stats-row{
+display:flex;gap:2.5rem;margin-top:2.5rem;
+flex-wrap:wrap;
+}
+.stat{min-width:80px}
+.stat-val{
+font-size:2rem;font-weight:800;
+color:var(–g);line-height:1;
+}
+.stat-lbl{
+font-size:0.45rem;font-weight:600;
+letter-spacing:0.2em;text-transform:uppercase;
+color:var(–chalk-dim);margin-top:0.4rem;
+}
+
+/* Analysis block */
+.analysis-block{
+background:var(–bg2);
+border:1px solid var(–border);
+border-left:3px solid var(–g-dim);
+border-radius:0 8px 8px 0;
+padding:1.5rem 2rem;
+margin-top:2rem;
+font-size:0.74rem;line-height:2;
+color:var(–g);
+max-width:560px;
+overflow-x:auto;
+}
+.ab-dim{color:var(–g-dim)}
+.ab-amber{color:var(–amber)}
+.ab-red{color:var(–red);font-weight:600}
+
+/* Tech tags */
+.tech-tags{
+display:flex;gap:0.5rem;margin-top:2rem;flex-wrap:wrap;
+}
+.tech-tag{
+font-size:0.6rem;font-weight:500;
+letter-spacing:0.08em;
+color:var(–chalk-dim);
+padding:0.45rem 0.9rem;
+border:1px solid var(–border);
+border-radius:4px;
+transition:border-color 0.2s,color 0.2s;
+}
+.tech-tag:hover{border-color:rgba(224,230,226,0.18);color:var(–chalk-mid)}
+
+/* ============ INSTALL SECTION ============ */
+.install-section{
+padding:6rem 0 4rem;
+border-top:1px solid var(–border);
+}
+
+.install-block{
+background:var(–bg2);
+border:1px solid var(–border);
+border-radius:8px;
+padding:1.5rem 2rem;
+margin-top:2rem;
+display:flex;align-items:center;
+justify-content:space-between;
+gap:1.5rem;flex-wrap:wrap;
+}
+
+.install-cmd{
+font-size:0.8rem;color:var(–g);
+cursor:pointer;display:flex;align-items:center;gap:0.5rem;
+transition:text-shadow 0.2s;
+}
+.install-cmd:hover{text-shadow:0 0 12px var(–g-glow)}
+.install-cmd .prompt{color:var(–g-dim)}
+
+.install-note{
+font-size:0.6rem;color:var(–chalk-dim);
+margin-top:0.5rem;font-weight:400;
+}
+
+.install-actions{
+display:flex;gap:0.8rem;flex-wrap:wrap;
+}
+
+/* ============ FOOTER ============ */
+footer{
+padding:3rem 0;
+border-top:1px solid var(–border);
+display:flex;justify-content:space-between;
+align-items:flex-end;flex-wrap:wrap;gap:1rem;
+}
+
+.footer-text{
+font-size:0.55rem;font-weight:400;
+color:var(–chalk-dim);line-height:2;
+letter-spacing:0.05em;
+}
+
+.footer-links{display:flex;gap:1.5rem}
+.footer-links a{
+font-size:0.6rem;font-weight:600;
+letter-spacing:0.1em;
+color:var(–chalk-dim);
+transition:color 0.2s;
+}
+.footer-links a:hover{color:var(–g)}
+
+/* ============ SCROLL REVEALS ============ */
+.reveal{
+opacity:0;transform:translateY(20px);
+transition:opacity 0.7s ease,transform 0.7s ease;
+}
+.reveal.visible{opacity:1;transform:translateY(0)}
+
+/* Stagger children */
+.reveal-stagger > *{
+opacity:0;transform:translateY(12px);
+transition:opacity 0.5s ease,transform 0.5s ease;
+}
+.reveal-stagger.visible > *:nth-child(1){opacity:1;transform:translateY(0);transition-delay:0s}
+.reveal-stagger.visible > *:nth-child(2){opacity:1;transform:translateY(0);transition-delay:0.08s}
+.reveal-stagger.visible > *:nth-child(3){opacity:1;transform:translateY(0);transition-delay:0.16s}
+.reveal-stagger.visible > *:nth-child(4){opacity:1;transform:translateY(0);transition-delay:0.24s}
+.reveal-stagger.visible > *:nth-child(5){opacity:1;transform:translateY(0);transition-delay:0.32s}
+.reveal-stagger.visible > *:nth-child(6){opacity:1;transform:translateY(0);transition-delay:0.4s}
+.reveal-stagger.visible > *:nth-child(7){opacity:1;transform:translateY(0);transition-delay:0.48s}
+
+/* ============ HERO ENTRANCE ============ */
+.hero-eyebrow{opacity:0;animation:fadeUp 0.6s 0.1s forwards}
+.hero h1{opacity:0;animation:fadeUp 0.7s 0.2s forwards}
+.hero-desc{opacity:0;animation:fadeUp 0.6s 0.5s forwards}
+.hero-actions{opacity:0;animation:fadeUp 0.6s 0.7s forwards}
+
+@keyframes fadeUp{
+from{opacity:0;transform:translateY(15px)}
+to{opacity:1;transform:translateY(0)}
+}
+
+/* ============ RESPONSIVE ============ */
+@media(max-width:640px){
+nav{padding:0 1.2rem;height:50px}
+.nav-links{gap:1rem}
+.nav-link.hide-mobile{display:none}
+.container{padding:0 1.2rem}
+.hero{padding:8rem 0 4rem}
+section{padding:4rem 0}
+.stats-row{gap:1.5rem}
+.install-block{flex-direction:column;align-items:flex-start}
+.install-actions{width:100%}
+.install-actions .btn{width:100%;justify-content:center}
+.hero-actions{flex-direction:column}
+.hero-actions .btn{width:100%;justify-content:center}
+footer{flex-direction:column;align-items:flex-start}
 }
 </style>
 
 </head>
 <body>
 
-<div class="monitor">
-  <div class="monitor-brand">MAGI Systems</div>
+<!-- NAV -->
 
-  <div class="screen" id="screen">
-    <div class="crt-wrap" id="crtWrap">
-      <div class="scanlines"></div>
-      <div class="scan-beam"></div>
-      <div class="flicker">
-        <!-- Tabs -->
-        <div class="tabs" id="tabs">
-          <button class="tab active" data-tab="boot">BOOT</button>
-          <button class="tab disabled" data-tab="about">ABOUT</button>
-          <button class="tab disabled" data-tab="features">FEATURES</button>
-          <button class="tab disabled" data-tab="install">INSTALL</button>
-          <button class="tab disabled" data-tab="links">LINKS</button>
-          <div class="tab-status">
-            <span><span class="status-dot" id="statusDot"></span><span id="statusText">BOOT</span></span>
-            <span id="clock"></span>
-          </div>
+<nav>
+  <a href="#" class="nav-brand">MAGI</a>
+  <div class="nav-links">
+    <a href="#features" class="nav-link hide-mobile">Features</a>
+    <a href="#discovery" class="nav-link hide-mobile">Discovery</a>
+    <a href="https://github.com/Bloodshed-Rain/themagi" class="nav-link" target="_blank" rel="noopener">GitHub</a>
+    <a href="https://github.com/Bloodshed-Rain/themagi/releases" class="nav-cta" target="_blank" rel="noopener">Download</a>
+  </div>
+</nav>
+
+<div class="container">
+
+  <!-- HERO -->
+
+  <header class="hero">
+    <div class="hero-eyebrow">Open-source Melee coaching</div>
+    <h1>
+      MAGI
+      <span>Melee Analysis through Generative Intelligence</span>
+    </h1>
+    <p class="hero-desc">Drop your Slippi replays into a desktop app that runs 40+ statistical analyses per game, finds correlations you'd never spot watching VODs, and explains what it all means in plain Melee — not marketing speak.</p>
+    <div class="hero-actions">
+      <a href="https://github.com/Bloodshed-Rain/themagi/releases" class="btn btn-primary" target="_blank" rel="noopener">Download Latest Release</a>
+      <a href="https://github.com/Bloodshed-Rain/themagi" class="btn btn-secondary" target="_blank" rel="noopener">View Source on GitHub</a>
+    </div>
+  </header>
+
+  <!-- FEATURES -->
+
+  <section id="features" class="reveal">
+    <div class="section-label">What it does</div>
+    <h2>Your .slp files are denser than you think.</h2>
+    <p>MAGI parses every frame of every replay — inputs, positions, state transitions, DI vectors, ledge options, punish windows. Not sampling. Every frame, across all 26 characters. Then it runs the numbers and surfaces what actually matters to your improvement.</p>
+    <div class="stats-row reveal-stagger">
+      <div class="stat"><div class="stat-val">40+</div><div class="stat-lbl">Metrics per game</div></div>
+      <div class="stat"><div class="stat-val">26</div><div class="stat-lbl">Characters</div></div>
+      <div class="stat"><div class="stat-val">6</div><div class="stat-lbl">LLM providers</div></div>
+      <div class="stat"><div class="stat-val">∞</div><div class="stat-lbl">Local replays</div></div>
+    </div>
+  </section>
+
+  <!-- DEEP DISCOVERY -->
+
+  <section id="discovery" class="reveal">
+    <div class="section-label">Deep Discovery engine</div>
+    <h2>Correlations you'd never find watching VODs.</h2>
+    <p>Full pairwise Pearson correlation across 21 performance axes. MAGI doesn't just count — it finds relationships between metrics and explains what they mean for your character, matchup, and habits.</p>
+    <div class="analysis-block">
+      <span class="ab-dim">// Deep Discovery output</span><br><br>
+      CORR: openings_per_kill ↔ neutral_win_rate<br>
+      r = 0.847 &nbsp;|&nbsp; p &lt; 0.001 &nbsp;|&nbsp; <span class="ab-amber">STRONG POSITIVE</span><br><br>
+      CORR: stocks_lost ↔ di_quality<br>
+      r = -0.631 &nbsp;|&nbsp; p &lt; 0.01 &nbsp;|&nbsp; <span class="ab-red">NEGATIVE — INVESTIGATE</span><br><br>
+      <span class="ab-dim">// DI quality degrades after losing stocks.</span><br>
+      <span class="ab-dim">// Tilt-correlated? Fatigue? Pattern exploit?</span>
+    </div>
+  </section>
+
+  <!-- AI -->
+
+  <section class="reveal">
+    <div class="section-label">AI coaching</div>
+    <h2>Six LLM providers. Your API key. No middleman.</h2>
+    <p>OpenAI, Anthropic, Google, Groq, Mistral, OpenRouter — bring your own key. Every prompt is built with matchup context, character frame data, and the statistical fingerprint of your session. Ask why you're losing the Fox matchup and get an answer in terms you'd hear from a top player doing commentary, not a chatbot telling you to "practice more."</p>
+  </section>
+
+  <!-- LOCAL & OPEN -->
+
+  <section class="reveal">
+    <div class="section-label">Architecture</div>
+    <h2>Desktop app. Local data. Open source.</h2>
+    <p>Your replays stay on your machine. Analysis lives in a local SQLite database. Nothing phones home. Nothing requires an account. The codebase is MIT-licensed — fork it, extend it, break it apart. This is a tool, not a service.</p>
+    <div class="tech-tags reveal-stagger">
+      <span class="tech-tag">Electron</span>
+      <span class="tech-tag">TypeScript</span>
+      <span class="tech-tag">React</span>
+      <span class="tech-tag">Vite</span>
+      <span class="tech-tag">slippi-js</span>
+      <span class="tech-tag">SQLite</span>
+      <span class="tech-tag">MIT License</span>
+    </div>
+  </section>
+
+  <!-- INSTALL -->
+
+  <section class="install-section reveal">
+    <div class="section-label">Run it</div>
+    <h2>Clone. Install. Go.</h2>
+    <div class="install-block">
+      <div>
+        <div class="install-cmd" id="cloneCmd" tabindex="0" role="button" aria-label="Copy clone command">
+          <span class="prompt">$</span>
+          <span>git clone https://github.com/Bloodshed-Rain/themagi.git</span>
         </div>
-
-```
-    <!-- Content -->
-    <div class="content" id="content"></div>
-
-    <!-- Bottom bar -->
-    <div class="status-bar">
-      <span>ELECTRON // REACT // SLIPPI-JS</span>
-      <span>MIT LICENSE</span>
-      <span>WIN / MAC / LINUX</span>
+        <div class="install-note">Requires Node 18+. Builds for macOS, Windows, Linux.</div>
+      </div>
+      <div class="install-actions">
+        <a href="https://github.com/Bloodshed-Rain/themagi" class="btn btn-primary" target="_blank" rel="noopener">Source →</a>
+        <a href="https://github.com/Bloodshed-Rain/themagi/releases" class="btn btn-secondary" target="_blank" rel="noopener">Releases</a>
+      </div>
     </div>
-  </div>
-</div>
-```
+  </section>
 
-  </div>
+  <!-- FOOTER -->
 
-  <div class="chin">
-    <div style="display:flex;align-items:center;gap:8px">
-      <div class="power-led" id="powerLed"></div>
-      <span class="chin-label">POWER</span>
+  <footer>
+    <div class="footer-text">
+      MAGI v1.3 — Melee Analysis through Generative Intelligence<br>
+      Open source. Built by a player. Not a company.
     </div>
-    <div class="chin-center">◆ MAGI ◆</div>
-    <span class="chin-label">MDL-2026</span>
-  </div>
+    <nav class="footer-links" aria-label="Footer links">
+      <a href="https://github.com/Bloodshed-Rain/themagi" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/Bloodshed-Rain/themagi/releases" target="_blank" rel="noopener">Releases</a>
+    </nav>
+  </footer>
+
 </div>
 
 <script>
-/* ═══════════════════════════════════════
-   MAGI CRT LANDING — VANILLA JS ENGINE
-═══════════════════════════════════════ */
+// Scroll reveal
+(function(){
+  const obs = new IntersectionObserver(entries=>{
+    entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')});
+  },{threshold:0.1,rootMargin:'0px 0px -40px 0px'});
+  document.querySelectorAll('.reveal,.reveal-stagger').forEach(el=>obs.observe(el));
+})();
 
-const BOOT_LINES = [
-  { text: "MAGI SYSTEM v1.3.0", delay: 0, cls: "t-title" },
-  { text: "Melee Analysis through Generative Intelligence", delay: 200, cls: "t-sub" },
-  { text: "", delay: 300, cls: "t-normal" },
-  { text: "[ INIT ] Loading slippi-js parser............. OK", delay: 400, cls: "t-normal" },
-  { text: "[ INIT ] SQLite database connected............ OK", delay: 600, cls: "t-normal" },
-  { text: "[ INIT ] LLM queue initialized (6 providers).. OK", delay: 800, cls: "t-normal" },
-  { text: "[ INIT ] Stat engine armed (40+ metrics)...... OK", delay: 1000, cls: "t-normal" },
-  { text: "[ INIT ] Character modules loaded (26)........ OK", delay: 1200, cls: "t-normal" },
-  { text: "[ INIT ] File watcher standby................. OK", delay: 1400, cls: "t-normal" },
-  { text: "", delay: 1500, cls: "t-normal" },
-  { text: "All systems nominal. MAGI is online.", delay: 1600, cls: "t-success" },
-  { text: "", delay: 1800, cls: "t-normal" },
-  { text: "Select a panel above to explore.", delay: 2000, cls: "t-dim" },
-];
-
-const PANELS = {
-about: `MAGI \u2014 The First AI Coach for Super Smash Bros. Melee
-
-Drop your .slp files. MAGI parses every frame, computes 40+ stats
-per game, then sends structured context to an LLM that returns
-specific, actionable coaching \u2014 not generic advice, but
-observations grounded in YOUR data.
-
-  \u25C6 Neutral win rate, L-cancel %, openings per kill
-  \u25C6 Habit entropy analysis \u2014 detects predictable patterns
-  \u25C6 DI quality scoring, shield pressure tracking
-  \u25C6 26 character signature stats (Fox waveshines, Falco
-    pillars, Marth Ken combos, Sheik tech chases,
-    Falcon knees, Puff rests, Peach turnips...)
-  \u25C6 Opponent Rivalry Dossier \u2014 deep dive any player
-  \u25C6 Trend tracking with 5-game rolling averages
-  \u25C6 MAGI commentary \u2014 blunt, witty AI personality
-
-Slippi gives you replays. Unclepunch gives you training mode.
-Nobody gives you a coach. Until now.
-
-  Free \u00B7 Local-first \u00B7 Open source \u00B7 No account \u00B7 No server
-  Windows \u00B7 macOS \u00B7 Linux`,
-
-features: `CORE SYSTEMS
-\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-
-[AI COACHING]
-  Streaming LLM analysis grounded in your match data.
-  Player history context \u2014 references your trends
-  and habits. Cached per-game. Re-reading costs $0.
-
-[MULTI-LLM]
-  Gemini Flash (free, default) \u00B7 OpenRouter \u00B7 Claude
-  GPT-4o \u00B7 Ollama \u00B7 LM Studio
-  Zero lock-in. BYOK or run fully local.
-
-[STAT ENGINE]
-  40+ per-game metrics. Frame-level forensics.
-  Six-axis player archetype radar.
-  Habit entropy. DI quality. Shield pressure.
-
-[26 CHARACTERS]
-  Signature stats unique to each kit.
-  Character-themed UI skins with card art.
-  Per-character radar charts and matchup records.
-
-[OPPONENT INTEL]
-  Rivalry Dossier \u2014 head-to-head deep dive.
-  Auto-detected sets within 15-min windows.
-  Stage/character breakdowns per opponent.
-
-[TRENDS]
-  Rolling averages. Line charts. AI commentary.
-  Track your arc across sessions and months.`,
-
-install: `QUICK START
-\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-
-  $ git clone https://github.com/Bloodshed-Rain/TheMAGI.git
-  $ cd TheMAGI
-  $ npm install && npx electron-rebuild
-  $ npm run dev
-
-Or grab a release binary:
-  \u2192 github.com/Bloodshed-Rain/TheMAGI/releases/latest
-
-FIRST RUN
-\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-
-  1. Onboarding wizard walks you through setup
-  2. Enter your display name / tag
-  3. Browse to your Slippi replay folder
-  4. Import replays \u2192 get coached
-
-AI coaching works immediately with Gemini 2.5 Flash
-(free tier, no API key). Configure other providers
-in Settings.
-
-PLATFORMS
-\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-
-  Windows \u00B7 macOS \u00B7 Linux
-  Node.js 18+ required for dev builds`,
-
-links: `LINKS
-\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-
-  Repository    {{https://github.com/Bloodshed-Rain/TheMAGI|github.com/Bloodshed-Rain/TheMAGI}}
-  Releases      {{https://github.com/Bloodshed-Rain/TheMAGI/releases|github.com/.../releases}}
-  License       MIT
-
-BUILT WITH
-\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-
-  Electron \u00B7 React \u00B7 TypeScript \u00B7 Vite
-  slippi-js \u00B7 SQLite \u00B7 Vitest
-
-CONNECT
-\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-
-  Star the repo. Open issues. Submit PRs.
-
-  This project is free and open source.
-  If enough people use it, I'll figure out
-  how to cover API costs. Local LLM models
-  and BYOK will always be supported.`
-};
-
-/* ═══ DOM REFS ═══ */
-const $ = (s) => document.querySelector(s);
-const $$ = (s) => document.querySelectorAll(s);
-const screen = $("#screen");
-const crtWrap = $("#crtWrap");
-const content = $("#content");
-const statusDot = $("#statusDot");
-const statusText = $("#statusText");
-const clockEl = $("#clock");
-const powerLed = $("#powerLed");
-
-let booted = false;
-let activeTab = "boot";
-let typewriterRAF = null;
-
-/* ═══ CLOCK ═══ */
-function tickClock() {
-  const d = new Date();
-  const t = d.toLocaleTimeString("en-US", { hour12: false });
-  const ms = String(d.getMilliseconds()).padStart(3, "0").slice(0, 2);
-  clockEl.textContent = t + "." + ms;
-}
-tickClock();
-setInterval(tickClock, 47);
-
-/* ═══ POWER ON ═══ */
-setTimeout(() => {
-  crtWrap.classList.add("powered");
-  screen.classList.add("on");
-  powerLed.classList.add("on");
-  runBoot();
-}, 400);
-
-/* ═══ BOOT SEQUENCE ═══ */
-function runBoot() {
-  content.innerHTML = "";
-  const timers = [];
-  BOOT_LINES.forEach((line, i) => {
-    timers.push(setTimeout(() => {
-      const div = document.createElement("div");
-      div.className = line.cls;
-      div.textContent = line.text || "\u00A0";
-      content.appendChild(div);
-      content.scrollTop = content.scrollHeight;
-
-      if (i === BOOT_LINES.length - 1) {
-        const cur = document.createElement("span");
-        cur.className = "cursor";
-        content.appendChild(cur);
-        setTimeout(finishBoot, 800);
-      }
-    }, line.delay));
-  });
-}
-
-function finishBoot() {
-  booted = true;
-  statusDot.classList.add("live");
-  statusText.textContent = "LIVE";
-  $$(".tab.disabled").forEach((t) => {
-    t.classList.remove("disabled");
-  });
-}
-
-/* ═══ TAB SWITCHING ═══ */
-$$("#tabs .tab").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    const tab = btn.dataset.tab;
-    if (tab === "boot" || (!booted && tab !== "boot")) return;
-    if (tab === activeTab) return;
-
-    activeTab = tab;
-    $$(".tab").forEach((t) => t.classList.remove("active"));
-    btn.classList.add("active");
-
-    if (typewriterRAF) cancelAnimationFrame(typewriterRAF);
-    content.innerHTML = "";
-
-    typewritePanel(PANELS[tab]);
+// Copy clone command
+document.getElementById('cloneCmd').addEventListener('click',function(){
+  navigator.clipboard.writeText('git clone https://github.com/Bloodshed-Rain/themagi.git').then(()=>{
+    const sp=this.querySelector('span:last-child');
+    const o=sp.textContent;
+    sp.textContent='Copied to clipboard.';
+    sp.style.color='#E8A030';
+    setTimeout(()=>{sp.textContent=o;sp.style.color=''},1800);
   });
 });
-
-/* ═══ TYPEWRITER ENGINE ═══ */
-function typewritePanel(raw) {
-  content.innerHTML = "";
-
-  /* Parse {{url|label}} link syntax into segments */
-  const segments = [];
-  let remaining = raw;
-  const linkRe = /\{\{([^|]+)\|([^}]+)\}\}/;
-  while (true) {
-    const m = remaining.match(linkRe);
-    if (!m) { segments.push({ type: "text", value: remaining }); break; }
-    const before = remaining.slice(0, m.index);
-    if (before) segments.push({ type: "text", value: before });
-    segments.push({ type: "link", url: m[1], label: m[2] });
-    remaining = remaining.slice(m.index + m[0].length);
-  }
-
-  /* Build flat char array with metadata */
-  const chars = [];
-  segments.forEach((seg) => {
-    if (seg.type === "text") {
-      for (const ch of seg.value) chars.push({ ch, link: null });
-    } else {
-      for (const ch of seg.label) chars.push({ ch, link: seg.url });
-    }
-  });
-
-  const span = document.createElement("span");
-  span.className = "t-body";
-  content.appendChild(span);
-
-  const cursor = document.createElement("span");
-  cursor.className = "cursor";
-  content.appendChild(cursor);
-
-  let idx = 0;
-  let currentLink = null;
-  let currentAnchor = null;
-  const speed = 3;
-  let lastTime = 0;
-
-  function step(timestamp) {
-    if (!lastTime) lastTime = timestamp;
-    const elapsed = timestamp - lastTime;
-    const target = Math.min(Math.floor(elapsed / speed), chars.length);
-
-    while (idx < target) {
-      const c = chars[idx];
-      if (c.link && c.link !== currentLink) {
-        currentLink = c.link;
-        currentAnchor = document.createElement("a");
-        currentAnchor.href = c.link;
-        currentAnchor.target = "_blank";
-        currentAnchor.rel = "noopener";
-        span.appendChild(currentAnchor);
-      } else if (!c.link && currentLink) {
-        currentLink = null;
-        currentAnchor = null;
-      }
-
-      const textNode = document.createTextNode(c.ch);
-      if (currentAnchor) {
-        currentAnchor.appendChild(textNode);
-      } else {
-        span.appendChild(textNode);
-      }
-      idx++;
-    }
-
-    content.scrollTop = content.scrollHeight;
-
-    if (idx < chars.length) {
-      typewriterRAF = requestAnimationFrame(step);
-    } else {
-      cursor.remove();
-    }
-  }
-  typewriterRAF = requestAnimationFrame(step);
-}
+document.getElementById('cloneCmd').addEventListener('keydown',function(e){
+  if(e.key==='Enter'||e.key===' '){e.preventDefault();this.click()}
+});
 </script>
 
 </body>
