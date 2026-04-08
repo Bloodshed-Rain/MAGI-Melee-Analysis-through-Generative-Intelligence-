@@ -81,6 +81,10 @@ function createWindow(): void {
         return;
       }
     }
+    // Allow the initial file:// load of our own renderer HTML in production
+    if (url.startsWith("file://") && url.includes("/dist/renderer/index.html")) {
+      return;
+    }
     event.preventDefault();
   });
 
