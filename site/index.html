@@ -14,40 +14,40 @@
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 
 :root{
-–g:#21BA45;
-–g2:#2EE85A;
-–g-dim:rgba(33,186,69,0.45);
-–g-lo:rgba(33,186,69,0.12);
-–g-glow:rgba(33,186,69,0.08);
-–amber:#E8A030;
-–red:#D83828;
-–bg:#070A08;
-–bg2:#0B0F0C;
-–chalk:#E0E6E2;
-–chalk-mid:rgba(224,230,226,0.7);
-–chalk-dim:rgba(224,230,226,0.45);
-–border:rgba(224,230,226,0.08);
-–ui:‘Outfit’,sans-serif;
-–serif:‘Instrument Serif’,serif;
+--g:#21BA45;
+--g2:#2EE85A;
+--g-dim:rgba(33,186,69,0.45);
+--g-lo:rgba(33,186,69,0.12);
+--g-glow:rgba(33,186,69,0.08);
+--amber:#E8A030;
+--red:#D83828;
+--bg:#070A08;
+--bg2:#0B0F0C;
+--chalk:#E0E6E2;
+--chalk-mid:rgba(224,230,226,0.7);
+--chalk-dim:rgba(224,230,226,0.45);
+--border:rgba(224,230,226,0.08);
+--ui:'Outfit',sans-serif;
+--serif:'Instrument Serif',serif;
 }
 
 html{
-background:var(–bg)!important;
+background:var(--bg)!important;
 scroll-behavior:smooth;
 scrollbar-width:thin;
-scrollbar-color:var(–g-dim) var(–bg);
+scrollbar-color:var(--g-dim) var(--bg);
 }
 body{
-background:var(–bg)!important;
-font-family:var(–ui);
-color:var(–chalk);
+background:var(--bg)!important;
+font-family:var(--ui);
+color:var(--chalk);
 -webkit-font-smoothing:antialiased;
 overflow-x:hidden;
 }
-::selection{background:var(–g);color:var(–bg)}
+::selection{background:var(--g);color:var(--bg)}
 
 a{color:inherit;text-decoration:none}
-a:focus-visible{outline:2px solid var(–g);outline-offset:3px}
+a:focus-visible{outline:2px solid var(--g);outline-offset:3px}
 
 /* ============ NAV ============ */
 nav{
@@ -56,28 +56,25 @@ padding:0 2rem;height:56px;
 display:flex;align-items:center;justify-content:space-between;
 background:rgba(7,10,8,0.8);
 backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
-border-bottom:1px solid var(–border);
+border-bottom:1px solid var(--border);
 }
-
 .nav-brand{
 font-size:0.7rem;font-weight:800;
 letter-spacing:0.3em;text-transform:uppercase;
-color:var(–g);
+color:var(--g);
 }
-
 .nav-links{display:flex;align-items:center;gap:1.8rem}
 .nav-link{
 font-size:0.68rem;font-weight:500;
-color:var(–chalk-mid);
+color:var(--chalk-mid);
 letter-spacing:0.04em;
 transition:color 0.2s;
 }
-.nav-link:hover{color:var(–chalk)}
-
+.nav-link:hover{color:var(--chalk)}
 .nav-cta{
 font-size:0.62rem;font-weight:700;
 letter-spacing:0.08em;text-transform:uppercase;
-color:var(–bg);background:var(–g);
+color:var(--bg);background:var(--g);
 padding:0.5rem 1.2rem;border-radius:5px;
 transition:transform 0.1s,box-shadow 0.2s;
 }
@@ -94,64 +91,57 @@ box-shadow:0 4px 16px rgba(33,186,69,0.25);
 padding:10rem 0 6rem;
 position:relative;
 }
-
 /* Subtle radial glow behind hero */
 .hero::before{
-content:’’;position:absolute;
+content:'';position:absolute;
 top:20%;left:50%;
 width:600px;height:400px;
 transform:translateX(-50%);
 background:radial-gradient(ellipse,rgba(33,186,69,0.06) 0%,transparent 70%);
 pointer-events:none;
 }
-
 .hero-eyebrow{
 font-size:0.55rem;font-weight:600;
 letter-spacing:0.35em;text-transform:uppercase;
-color:var(–g-dim);
+color:var(--g-dim);
 margin-bottom:1.5rem;
 }
-
 .hero h1{
 font-size:clamp(3.5rem,10vw,7rem);
 font-weight:900;
 letter-spacing:-0.04em;
 line-height:0.9;
-color:var(–chalk);
+color:var(--chalk);
 }
-
 .hero h1 span{
 display:block;
-font-family:var(–serif);
+font-family:var(--serif);
 font-weight:400;font-style:italic;
 font-size:clamp(1.3rem,3vw,2rem);
 letter-spacing:0.01em;
-color:var(–chalk-mid);
+color:var(--chalk-mid);
 margin-top:0.6rem;
 line-height:1.4;
 }
-
 .hero-desc{
 font-size:0.92rem;line-height:1.85;
-font-weight:300;color:var(–chalk-mid);
+font-weight:300;color:var(--chalk-mid);
 max-width:50ch;margin-top:2rem;
 }
-
 .hero-actions{
 display:flex;gap:0.8rem;margin-top:2.5rem;
 flex-wrap:wrap;
 }
-
 .btn{
 display:inline-flex;align-items:center;gap:0.5rem;
-font-family:var(–ui);font-size:0.72rem;font-weight:700;
+font-family:var(--ui);font-size:0.72rem;font-weight:700;
 letter-spacing:0.06em;
 padding:0.85rem 2rem;border-radius:6px;
 cursor:pointer;border:none;
 transition:transform 0.1s,box-shadow 0.2s;
 }
 .btn-primary{
-background:var(–g);color:var(–bg);
+background:var(--g);color:var(--bg);
 box-shadow:0 2px 10px rgba(33,186,69,0.2);
 }
 .btn-primary:hover{
@@ -159,36 +149,33 @@ transform:translateY(-1px);
 box-shadow:0 4px 20px rgba(33,186,69,0.3);
 }
 .btn-secondary{
-background:transparent;color:var(–chalk-mid);
-border:1px solid var(–border);
+background:transparent;color:var(--chalk-mid);
+border:1px solid var(--border);
 }
 .btn-secondary:hover{
 border-color:rgba(224,230,226,0.2);
-color:var(–chalk);
+color:var(--chalk);
 }
 
 /* ============ SECTIONS ============ */
 section{padding:6rem 0}
-section + section{border-top:1px solid var(–border)}
-
+section + section{border-top:1px solid var(--border)}
 .section-label{
 font-size:0.45rem;font-weight:700;
 letter-spacing:0.35em;text-transform:uppercase;
-color:var(–g-dim);margin-bottom:1.5rem;
+color:var(--g-dim);margin-bottom:1.5rem;
 }
-
 section h2{
-font-family:var(–serif);
+font-family:var(--serif);
 font-size:clamp(1.8rem,4vw,2.6rem);
 font-weight:400;
 line-height:1.2;
-color:var(–chalk);
+color:var(--chalk);
 max-width:20ch;
 }
-
 section p{
 font-size:0.88rem;line-height:1.9;
-font-weight:300;color:var(–chalk-mid);
+font-weight:300;color:var(--chalk-mid);
 max-width:55ch;margin-top:1rem;
 }
 
@@ -200,30 +187,30 @@ flex-wrap:wrap;
 .stat{min-width:80px}
 .stat-val{
 font-size:2rem;font-weight:800;
-color:var(–g);line-height:1;
+color:var(--g);line-height:1;
 }
 .stat-lbl{
 font-size:0.45rem;font-weight:600;
 letter-spacing:0.2em;text-transform:uppercase;
-color:var(–chalk-dim);margin-top:0.4rem;
+color:var(--chalk-dim);margin-top:0.4rem;
 }
 
 /* Analysis block */
 .analysis-block{
-background:var(–bg2);
-border:1px solid var(–border);
-border-left:3px solid var(–g-dim);
+background:var(--bg2);
+border:1px solid var(--border);
+border-left:3px solid var(--g-dim);
 border-radius:0 8px 8px 0;
 padding:1.5rem 2rem;
 margin-top:2rem;
 font-size:0.74rem;line-height:2;
-color:var(–g);
+color:var(--g);
 max-width:560px;
 overflow-x:auto;
 }
-.ab-dim{color:var(–g-dim)}
-.ab-amber{color:var(–amber)}
-.ab-red{color:var(–red);font-weight:600}
+.ab-dim{color:var(--g-dim)}
+.ab-amber{color:var(--amber)}
+.ab-red{color:var(--red);font-weight:600}
 
 /* Tech tags */
 .tech-tags{
@@ -232,23 +219,22 @@ display:flex;gap:0.5rem;margin-top:2rem;flex-wrap:wrap;
 .tech-tag{
 font-size:0.6rem;font-weight:500;
 letter-spacing:0.08em;
-color:var(–chalk-dim);
+color:var(--chalk-dim);
 padding:0.45rem 0.9rem;
-border:1px solid var(–border);
+border:1px solid var(--border);
 border-radius:4px;
 transition:border-color 0.2s,color 0.2s;
 }
-.tech-tag:hover{border-color:rgba(224,230,226,0.18);color:var(–chalk-mid)}
+.tech-tag:hover{border-color:rgba(224,230,226,0.18);color:var(--chalk-mid)}
 
 /* ============ INSTALL SECTION ============ */
 .install-section{
 padding:6rem 0 4rem;
-border-top:1px solid var(–border);
+border-top:1px solid var(--border);
 }
-
 .install-block{
-background:var(–bg2);
-border:1px solid var(–border);
+background:var(--bg2);
+border:1px solid var(--border);
 border-radius:8px;
 padding:1.5rem 2rem;
 margin-top:2rem;
@@ -256,20 +242,17 @@ display:flex;align-items:center;
 justify-content:space-between;
 gap:1.5rem;flex-wrap:wrap;
 }
-
 .install-cmd{
-font-size:0.8rem;color:var(–g);
+font-size:0.8rem;color:var(--g);
 cursor:pointer;display:flex;align-items:center;gap:0.5rem;
 transition:text-shadow 0.2s;
 }
-.install-cmd:hover{text-shadow:0 0 12px var(–g-glow)}
-.install-cmd .prompt{color:var(–g-dim)}
-
+.install-cmd:hover{text-shadow:0 0 12px var(--g-glow)}
+.install-cmd .prompt{color:var(--g-dim)}
 .install-note{
-font-size:0.6rem;color:var(–chalk-dim);
+font-size:0.6rem;color:var(--chalk-dim);
 margin-top:0.5rem;font-weight:400;
 }
-
 .install-actions{
 display:flex;gap:0.8rem;flex-wrap:wrap;
 }
@@ -277,25 +260,23 @@ display:flex;gap:0.8rem;flex-wrap:wrap;
 /* ============ FOOTER ============ */
 footer{
 padding:3rem 0;
-border-top:1px solid var(–border);
+border-top:1px solid var(--border);
 display:flex;justify-content:space-between;
 align-items:flex-end;flex-wrap:wrap;gap:1rem;
 }
-
 .footer-text{
 font-size:0.55rem;font-weight:400;
-color:var(–chalk-dim);line-height:2;
+color:var(--chalk-dim);line-height:2;
 letter-spacing:0.05em;
 }
-
 .footer-links{display:flex;gap:1.5rem}
 .footer-links a{
 font-size:0.6rem;font-weight:600;
 letter-spacing:0.1em;
-color:var(–chalk-dim);
+color:var(--chalk-dim);
 transition:color 0.2s;
 }
-.footer-links a:hover{color:var(–g)}
+.footer-links a:hover{color:var(--g)}
 
 /* ============ SCROLL REVEALS ============ */
 .reveal{
@@ -322,7 +303,6 @@ transition:opacity 0.5s ease,transform 0.5s ease;
 .hero h1{opacity:0;animation:fadeUp 0.7s 0.2s forwards}
 .hero-desc{opacity:0;animation:fadeUp 0.6s 0.5s forwards}
 .hero-actions{opacity:0;animation:fadeUp 0.6s 0.7s forwards}
-
 @keyframes fadeUp{
 from{opacity:0;transform:translateY(15px)}
 to{opacity:1;transform:translateY(0)}
@@ -345,12 +325,10 @@ section{padding:4rem 0}
 footer{flex-direction:column;align-items:flex-start}
 }
 </style>
-
 </head>
 <body>
 
 <!-- NAV -->
-
 <nav>
   <a href="#" class="nav-brand">MAGI</a>
   <div class="nav-links">
@@ -363,109 +341,102 @@ footer{flex-direction:column;align-items:flex-start}
 
 <div class="container">
 
-  <!-- HERO -->
+<!-- HERO -->
+<header class="hero">
+  <div class="hero-eyebrow">Open-source Melee coaching</div>
+  <h1>
+    MAGI
+    <span>Melee Analysis through Generative Intelligence</span>
+  </h1>
+  <p class="hero-desc">Drop your Slippi replays into a desktop app that runs 40+ statistical analyses per game, finds correlations you'd never spot watching VODs, and explains what it all means in plain Melee — not marketing speak.</p>
+  <div class="hero-actions">
+    <a href="https://github.com/Bloodshed-Rain/themagi/releases" class="btn btn-primary" target="_blank" rel="noopener">Download Latest Release</a>
+    <a href="https://github.com/Bloodshed-Rain/themagi" class="btn btn-secondary" target="_blank" rel="noopener">View Source on GitHub</a>
+  </div>
+</header>
 
-  <header class="hero">
-    <div class="hero-eyebrow">Open-source Melee coaching</div>
-    <h1>
-      MAGI
-      <span>Melee Analysis through Generative Intelligence</span>
-    </h1>
-    <p class="hero-desc">Drop your Slippi replays into a desktop app that runs 40+ statistical analyses per game, finds correlations you'd never spot watching VODs, and explains what it all means in plain Melee — not marketing speak.</p>
-    <div class="hero-actions">
-      <a href="https://github.com/Bloodshed-Rain/themagi/releases" class="btn btn-primary" target="_blank" rel="noopener">Download Latest Release</a>
-      <a href="https://github.com/Bloodshed-Rain/themagi" class="btn btn-secondary" target="_blank" rel="noopener">View Source on GitHub</a>
-    </div>
-  </header>
+<!-- FEATURES -->
+<section id="features" class="reveal">
+  <div class="section-label">What it does</div>
+  <h2>Your .slp files are denser than you think.</h2>
+  <p>MAGI parses every frame of every replay — inputs, positions, state transitions, DI vectors, ledge options, punish windows. Not sampling. Every frame, across all 26 characters. Then it runs the numbers and surfaces what actually matters to your improvement.</p>
+  <div class="stats-row reveal-stagger">
+    <div class="stat"><div class="stat-val">40+</div><div class="stat-lbl">Metrics per game</div></div>
+    <div class="stat"><div class="stat-val">26</div><div class="stat-lbl">Characters</div></div>
+    <div class="stat"><div class="stat-val">6</div><div class="stat-lbl">LLM providers</div></div>
+    <div class="stat"><div class="stat-val">∞</div><div class="stat-lbl">Local replays</div></div>
+  </div>
+</section>
 
-  <!-- FEATURES -->
+<!-- DEEP DISCOVERY -->
+<section id="discovery" class="reveal">
+  <div class="section-label">Deep Discovery engine</div>
+  <h2>Correlations you'd never find watching VODs.</h2>
+  <p>Full pairwise Pearson correlation across 21 performance axes. MAGI doesn't just count — it finds relationships between metrics and explains what they mean for your character, matchup, and habits.</p>
+  <div class="analysis-block">
+    <span class="ab-dim">// Deep Discovery output</span><br><br>
+    CORR: openings_per_kill ↔ neutral_win_rate<br>
+    r = 0.847 &nbsp;|&nbsp; p &lt; 0.001 &nbsp;|&nbsp; <span class="ab-amber">STRONG POSITIVE</span><br><br>
+    CORR: stocks_lost ↔ di_quality<br>
+    r = -0.631 &nbsp;|&nbsp; p &lt; 0.01 &nbsp;|&nbsp; <span class="ab-red">NEGATIVE — INVESTIGATE</span><br><br>
+    <span class="ab-dim">// DI quality degrades after losing stocks.</span><br>
+    <span class="ab-dim">// Tilt-correlated? Fatigue? Pattern exploit?</span>
+  </div>
+</section>
 
-  <section id="features" class="reveal">
-    <div class="section-label">What it does</div>
-    <h2>Your .slp files are denser than you think.</h2>
-    <p>MAGI parses every frame of every replay — inputs, positions, state transitions, DI vectors, ledge options, punish windows. Not sampling. Every frame, across all 26 characters. Then it runs the numbers and surfaces what actually matters to your improvement.</p>
-    <div class="stats-row reveal-stagger">
-      <div class="stat"><div class="stat-val">40+</div><div class="stat-lbl">Metrics per game</div></div>
-      <div class="stat"><div class="stat-val">26</div><div class="stat-lbl">Characters</div></div>
-      <div class="stat"><div class="stat-val">6</div><div class="stat-lbl">LLM providers</div></div>
-      <div class="stat"><div class="stat-val">∞</div><div class="stat-lbl">Local replays</div></div>
-    </div>
-  </section>
+<!-- AI -->
+<section class="reveal">
+  <div class="section-label">AI coaching</div>
+  <h2>Six LLM providers. Your API key. No middleman.</h2>
+  <p>OpenAI, Anthropic, Google, Groq, Mistral, OpenRouter — bring your own key. Every prompt is built with matchup context, character frame data, and the statistical fingerprint of your session. Ask why you're losing the Fox matchup and get an answer in terms you'd hear from a top player doing commentary, not a chatbot telling you to "practice more."</p>
+</section>
 
-  <!-- DEEP DISCOVERY -->
+<!-- LOCAL & OPEN -->
+<section class="reveal">
+  <div class="section-label">Architecture</div>
+  <h2>Desktop app. Local data. Open source.</h2>
+  <p>Your replays stay on your machine. Analysis lives in a local SQLite database. Nothing phones home. Nothing requires an account. The codebase is MIT-licensed — fork it, extend it, break it apart. This is a tool, not a service.</p>
+  <div class="tech-tags reveal-stagger">
+    <span class="tech-tag">Electron</span>
+    <span class="tech-tag">TypeScript</span>
+    <span class="tech-tag">React</span>
+    <span class="tech-tag">Vite</span>
+    <span class="tech-tag">slippi-js</span>
+    <span class="tech-tag">SQLite</span>
+    <span class="tech-tag">MIT License</span>
+  </div>
+</section>
 
-  <section id="discovery" class="reveal">
-    <div class="section-label">Deep Discovery engine</div>
-    <h2>Correlations you'd never find watching VODs.</h2>
-    <p>Full pairwise Pearson correlation across 21 performance axes. MAGI doesn't just count — it finds relationships between metrics and explains what they mean for your character, matchup, and habits.</p>
-    <div class="analysis-block">
-      <span class="ab-dim">// Deep Discovery output</span><br><br>
-      CORR: openings_per_kill ↔ neutral_win_rate<br>
-      r = 0.847 &nbsp;|&nbsp; p &lt; 0.001 &nbsp;|&nbsp; <span class="ab-amber">STRONG POSITIVE</span><br><br>
-      CORR: stocks_lost ↔ di_quality<br>
-      r = -0.631 &nbsp;|&nbsp; p &lt; 0.01 &nbsp;|&nbsp; <span class="ab-red">NEGATIVE — INVESTIGATE</span><br><br>
-      <span class="ab-dim">// DI quality degrades after losing stocks.</span><br>
-      <span class="ab-dim">// Tilt-correlated? Fatigue? Pattern exploit?</span>
-    </div>
-  </section>
-
-  <!-- AI -->
-
-  <section class="reveal">
-    <div class="section-label">AI coaching</div>
-    <h2>Six LLM providers. Your API key. No middleman.</h2>
-    <p>OpenAI, Anthropic, Google, Groq, Mistral, OpenRouter — bring your own key. Every prompt is built with matchup context, character frame data, and the statistical fingerprint of your session. Ask why you're losing the Fox matchup and get an answer in terms you'd hear from a top player doing commentary, not a chatbot telling you to "practice more."</p>
-  </section>
-
-  <!-- LOCAL & OPEN -->
-
-  <section class="reveal">
-    <div class="section-label">Architecture</div>
-    <h2>Desktop app. Local data. Open source.</h2>
-    <p>Your replays stay on your machine. Analysis lives in a local SQLite database. Nothing phones home. Nothing requires an account. The codebase is MIT-licensed — fork it, extend it, break it apart. This is a tool, not a service.</p>
-    <div class="tech-tags reveal-stagger">
-      <span class="tech-tag">Electron</span>
-      <span class="tech-tag">TypeScript</span>
-      <span class="tech-tag">React</span>
-      <span class="tech-tag">Vite</span>
-      <span class="tech-tag">slippi-js</span>
-      <span class="tech-tag">SQLite</span>
-      <span class="tech-tag">MIT License</span>
-    </div>
-  </section>
-
-  <!-- INSTALL -->
-
-  <section class="install-section reveal">
-    <div class="section-label">Run it</div>
-    <h2>Clone. Install. Go.</h2>
-    <div class="install-block">
-      <div>
-        <div class="install-cmd" id="cloneCmd" tabindex="0" role="button" aria-label="Copy clone command">
-          <span class="prompt">$</span>
-          <span>git clone https://github.com/Bloodshed-Rain/themagi.git</span>
-        </div>
-        <div class="install-note">Requires Node 18+. Builds for macOS, Windows, Linux.</div>
+<!-- INSTALL -->
+<section class="install-section reveal">
+  <div class="section-label">Run it</div>
+  <h2>Clone. Install. Go.</h2>
+  <div class="install-block">
+    <div>
+      <div class="install-cmd" id="cloneCmd" tabindex="0" role="button" aria-label="Copy clone command">
+        <span class="prompt">$</span>
+        <span>git clone https://github.com/Bloodshed-Rain/themagi.git</span>
       </div>
-      <div class="install-actions">
-        <a href="https://github.com/Bloodshed-Rain/themagi" class="btn btn-primary" target="_blank" rel="noopener">Source →</a>
-        <a href="https://github.com/Bloodshed-Rain/themagi/releases" class="btn btn-secondary" target="_blank" rel="noopener">Releases</a>
-      </div>
+      <div class="install-note">Requires Node 18+. Builds for macOS, Windows, Linux.</div>
     </div>
-  </section>
-
-  <!-- FOOTER -->
-
-  <footer>
-    <div class="footer-text">
-      MAGI v1.3 — Melee Analysis through Generative Intelligence<br>
-      Open source. Built by a player. Not a company.
+    <div class="install-actions">
+      <a href="https://github.com/Bloodshed-Rain/themagi" class="btn btn-primary" target="_blank" rel="noopener">Source →</a>
+      <a href="https://github.com/Bloodshed-Rain/themagi/releases" class="btn btn-secondary" target="_blank" rel="noopener">Releases</a>
     </div>
-    <nav class="footer-links" aria-label="Footer links">
-      <a href="https://github.com/Bloodshed-Rain/themagi" target="_blank" rel="noopener">GitHub</a>
-      <a href="https://github.com/Bloodshed-Rain/themagi/releases" target="_blank" rel="noopener">Releases</a>
-    </nav>
-  </footer>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-text">
+    MAGI v1.3 — Melee Analysis through Generative Intelligence<br>
+    Open source. Built by a player. Not a company.
+  </div>
+  <nav class="footer-links" aria-label="Footer links">
+    <a href="https://github.com/Bloodshed-Rain/themagi" target="_blank" rel="noopener">GitHub</a>
+    <a href="https://github.com/Bloodshed-Rain/themagi/releases" target="_blank" rel="noopener">Releases</a>
+  </nav>
+</footer>
 
 </div>
 
